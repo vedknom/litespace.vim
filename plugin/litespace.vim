@@ -57,6 +57,23 @@ function! s:RemoveListBuffersWindow(bufferNR)
     execute 'silent! bdelete ' . a:bufferNR
 endfunction
 
+function! s:OpenBuffer(splitBuffer)
+    let entry = getline(line('.'))
+    let parts = split(entry, "\t")
+    let bufferNR = parts[0]
+    let targetWindowNR = getbufvar(bufnr('%'), 'litespace_target_window', -1)
+    if targetWindowNR != -1
+        execute targetWindowNR . 'wincmd w'
+        if a:splitBuffer == 0
+            execute 'buffer ' . bufferNR
+        elseif a:splitBuffer == 1
+            execute 'split +buffer\ ' . bufferNR
+        else
+            execute 'rightbelow vsplit +buffer\ ' . bufferNR
+        endif
+    endif
+endfunction
+
 function! s:ListBuffers()
     let currentWindowNR = winnr()
     let currentWindowBufferNR = winbufnr(currentWindowNR)
@@ -90,12 +107,19 @@ function! s:ListBuffers()
             set modifiable
             call append(0, bufferNames)
             normal ddgg
+
             let bufferListNR = bufnr('%')
+            call setbufvar(bufferListNR, 'litespace_target_window', currentWindowNR)
             call s:RemoveBuffer(bufferListNR)
 
             autocmd BufLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
             autocmd BufWinLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
             nnoremap <buffer> <C-c> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+            nnoremap <buffer> <C-[> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+            nnoremap <buffer> <CR> :call <SID>OpenBuffer(0)<CR>
+            nnoremap <buffer> o :call <SID>OpenBuffer(0)<CR>
+            nnoremap <buffer> s :call <SID>OpenBuffer(1)<CR>
+            nnoremap <buffer> v :call <SID>OpenBuffer(2)<CR>
 
             set buftype=nofile
             set nomodifiable
