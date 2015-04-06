@@ -25,12 +25,36 @@ function! s:DebugBufferEvent(type)
   echom 'type: ' . a:type
     \ . ', afile: "' . expand('<afile>') . '"'
     \ . ', #: ' . expand('<abuf>')
+    \ . ', tab: ' . tabpagenr()
+endfunction
+
+function! s:GetTabBufferList()
+    let tabNR = tabpagenr()
+    let bufferList = gettabvar(tabNR, 'litespace_buffer_list', {})
+    if empty(bufferList)
+        call settabvar(tabNR, 'litespace_buffer_list', bufferList)
+    endif
+    return bufferList
+endfunction
+
+function! s:AddBuffer()
+    let bufNR = expand('<abuf>')
+    let bufferList = s:GetTabBufferList()
+    let bufferList[bufNR] = bufNR
+endfunction
+
+function! s:RemoveBuffer()
+    let bufNR = expand('<abuf>')
+    let bufferList = s:GetTabBufferList()
+    if has_key(bufferList, bufNR)
+        unlet bufferList[bufNR]
+    endif
 endfunction
 
 augroup LiteSpace
   autocmd!
-  autocmd BufWinEnter * call <SID>DebugBufferEvent('winenter')
-  autocmd BufUnload * call <SID>DebugBufferEvent('unload')
+  autocmd BufWinEnter * call <SID>AddBuffer()
+  autocmd BufUnload * call <SID>RemoveBuffer()
 augroup END
 
 nnoremap <unique> <Leader>tn :tabnew<CR>
