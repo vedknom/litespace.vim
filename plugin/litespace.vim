@@ -7,7 +7,7 @@ if (exists("g:loaded_litespace") && g:loaded_litespace) || &cp || v:version < 70
 endif
 let g:loaded_litespace = 1
 
-let g:litespace_buffer_list_height = 10
+" let g:litespace_buffer_list_height = 10
 " let g:litespace_show_unnamed = 0
 
 function! s:MoveToWindow(windowNR)
@@ -22,6 +22,10 @@ function! s:MoveToWindow(windowNR)
       execute 'buffer ' . currentWindowBufferNR
     endif
   endif
+endfunction
+
+function! s:MaxBufferListHeight()
+    return exists('g:litespace_buffer_list_height') ? g:litespace_buffer_list_height : 10
 endfunction
 
 function! s:DebugBufferEvent(type)
@@ -112,7 +116,7 @@ function! s:ListBuffers()
         else
             rightbelow new
             wincmd J
-            let buffer_list_height = min([g:litespace_buffer_list_height, len(bufferNames)])
+            let buffer_list_height = min([s:MaxBufferListHeight(), len(bufferNames)])
             execute buffer_list_height . 'wincmd _'
 
             set modifiable
