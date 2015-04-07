@@ -25,6 +25,31 @@ function! s:MoveToWindow(windowNR)
   endif
 endfunction
 
+function! s:CloseWindowsAbove()
+    while 1
+        let preWindowNR = winnr()
+        wincmd k
+        let postWindowNR = winnr()
+        if preWindowNR == postWindowNR
+            break
+        endif
+        wincmd c
+    endwhile
+endfunction
+
+function! s:CloseWindowsBelow()
+    let windowNR = winnr()
+    wincmd j
+    while winnr() != windowNR
+        wincmd c
+    endwhile
+endfunction
+
+function! s:ColumnOnlyWindow()
+    call s:CloseWindowsAbove()
+    call s:CloseWindowsBelow()
+endfunction
+
 " Tab buffer list
 function! s:MaxBufferListHeight()
     return exists('g:litespace_buffer_list_height') ? g:litespace_buffer_list_height : 10
@@ -212,4 +237,5 @@ nnoremap <unique> <Leader>wm2   :call <SID>MoveToWindow(2)<CR>
 nnoremap <unique> <Leader>wm3   :call <SID>MoveToWindow(3)<CR>
 nnoremap <unique> <Leader>wm4   :call <SID>MoveToWindow(4)<CR>
 nnoremap <unique> <Leader>wnt   :tab split<CR>:rightbelow vnew<CR>:wincmd w<CR>
+nnoremap <unique> <Leader>wo    :call <SID>ColumnOnlyWindow()<CR>
 nnoremap <unique> <Leader>ls    :call <SID>ListBuffers()<CR>
