@@ -50,6 +50,42 @@ function! s:ColumnOnlyWindow()
     call s:CloseWindowsBelow()
 endfunction
 
+function! s:WindowBufferNRs()
+    let windowBufferNRs = [-1]
+    let windowCount = winnr('$')
+    let windowIndex = 1
+    while windowIndex <= windowCount
+        call add(windowBufferNRs, winbufnr(windowIndex))
+        let windowIndex += 1
+    endwhile
+    return windowBufferNRs
+endfunction
+
+function! s:ColumnPrimaryWindow()
+    let currentWindowNR = winnr()
+    let windowBufferNRs = s:WindowBufferNRs()
+    call remove(windowBufferNRs, currentWindowNR)
+    echom join(windowBufferNRs)
+    wincmd o
+    let restoreWindowBufferNR = winnr()
+    let windowIndex = 1
+    while windowIndex < len(windowBufferNRs)
+        let bufferNR = windowBufferNRs[windowIndex]
+        if bufferNR != -1
+            if windowIndex == 1
+                rightbelow vnew
+            else
+                rightbelow new
+            endif
+            wincmd =
+            execute 'buffer ' . bufferNR
+            let windowIndex += 1
+        endif
+    endwhile
+    execute restoreWindowBufferNR . 'wincmd w'
+endfunction
+
+
 " Tab buffer list
 function! s:MaxBufferListHeight()
     return exists('g:litespace_buffer_list_height') ? g:litespace_buffer_list_height : 10
@@ -238,4 +274,5 @@ nnoremap <unique> <Leader>wm3   :call <SID>MoveToWindow(3)<CR>
 nnoremap <unique> <Leader>wm4   :call <SID>MoveToWindow(4)<CR>
 nnoremap <unique> <Leader>wnt   :tab split<CR>:rightbelow vnew<CR>:wincmd w<CR>
 nnoremap <unique> <Leader>wo    :call <SID>ColumnOnlyWindow()<CR>
+nnoremap <unique> <Leader>wp    :call <SID>ColumnPrimaryWindow()<CR>
 nnoremap <unique> <Leader>ls    :call <SID>ListBuffers()<CR>
