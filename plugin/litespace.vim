@@ -79,7 +79,7 @@ function! s:ListBuffers()
     let currentWindowBufferNR = winbufnr(currentWindowNR)
     let bufferList = s:GetTabBufferList()
     if empty(bufferList)
-        echom 'Tab buffer list is empty'
+        echom 'Buffer list is empty'
     else
         let bufferNames = []
         for key in sort(keys(bufferList))
@@ -97,7 +97,7 @@ function! s:ListBuffers()
         endfor
 
         if empty(bufferNames)
-            echom 'Tab buffer list is empty'
+            echom 'Buffer list is empty'
         else
             rightbelow new
             wincmd J
