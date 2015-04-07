@@ -76,10 +76,33 @@ function! s:GetBufferTargetWindowNR(bufferNR)
     return getbufvar(a:bufferNR, s:BufferTargetWindowVariableName(), -1)
 endfunction
 
-function! s:OpenBuffer(splitBuffer)
+function! s:GetCurrentBufferLineEntry()
     let entry = getline(line('.'))
     let parts = split(entry, "\t")
-    let bufferNR = parts[0]
+    return parts
+endfunction
+
+function! s:GetCurrentBufferLineBufferNR()
+    let parts = s:GetCurrentBufferLineEntry()
+    return parts[0]
+endfunction
+
+function! s:RemoveCurrentBufferLineBufferNR()
+    let bufferNR = bufnr('%')
+    let lineCount = line('$')
+    if lineCount > 0
+        call s:RemoveBuffer(s:GetCurrentBufferLineBufferNR())
+        setlocal modifiable
+        normal! dd
+        setlocal nomodifiable
+    endif
+    if lineCount <= 1
+        call s:RemoveListBuffersWindow(bufferNR)
+    endif
+endfunction
+
+function! s:OpenBuffer(splitBuffer)
+    let bufferNR = s:GetCurrentBufferLineBufferNR()
     let targetWindowNR = s:GetBufferTargetWindowNR(bufnr('%'))
     if targetWindowNR != -1
         execute targetWindowNR . 'wincmd w'
@@ -126,7 +149,7 @@ function! s:GetBufferNames()
     return bufferNames
 endfunction
 
-function! s:AddListBufferMappings()
+function! s:AddListBuffersMappings()
     autocmd BufLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
     autocmd BufWinLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
     nnoremap <buffer> <C-c> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
@@ -135,6 +158,15 @@ function! s:AddListBufferMappings()
     nnoremap <buffer> o :call <SID>OpenBuffer(0)<CR>
     nnoremap <buffer> s :call <SID>OpenBuffer(1)<CR>
     nnoremap <buffer> v :call <SID>OpenBuffer(2)<CR>
+    nnoremap <buffer> d :call <SID>RemoveCurrentBufferLineBufferNR()<CR>
+endfunction
+
+function! s:RedisplayBufferNames(bufferNames)
+    setlocal modifiable
+    normal ggdG
+    call append(0, a:bufferNames)
+    normal ddgg
+    setlocal nomodifiable
 endfunction
 
 function! s:DisplayBufferNames(bufferNames, targetWindowNR)
@@ -147,6 +179,7 @@ function! s:DisplayBufferNames(bufferNames, targetWindowNR)
         execute buffer_list_height . 'wincmd _'
 
         setlocal modifiable
+        normal ggdG
         call append(0, a:bufferNames)
         normal ddgg
 
@@ -154,7 +187,7 @@ function! s:DisplayBufferNames(bufferNames, targetWindowNR)
         call setbufvar(bufferListNR, s:BufferTargetWindowVariableName(), a:targetWindowNR)
         call s:RemoveBuffer(bufferListNR)
 
-        call s:AddListBufferMappings()
+        call s:AddListBuffersMappings()
 
         setlocal buftype=nofile
         setlocal nomodifiable
@@ -163,8 +196,7 @@ endfunction
 
 function! s:ListBuffers()
     let currentWindowNR = winnr()
-    let bufferNames = s:GetBufferNames()
-    call s:DisplayBufferNames(bufferNames, currentWindowNR)
+    call s:DisplayBufferNames(s:GetBufferNames(), currentWindowNR)
 endfunction
 
 augroup LiteSpace
