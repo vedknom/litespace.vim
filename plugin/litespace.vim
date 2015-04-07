@@ -7,7 +7,8 @@ if (exists("g:loaded_litespace") && g:loaded_litespace) || &cp || v:version < 70
 endif
 let g:loaded_litespace = 1
 
-let g:buffer_list_height = 10
+let g:litespace_buffer_list_height = 10
+" let g:litespace_show_unnamed = 0
 
 function! s:MoveToWindow(windowNR)
   let windowCount = winnr('$')
@@ -89,9 +90,19 @@ function! s:ListBuffers()
                     echoerr 'Stale buffer was not removed from list ' . bufferNR
                 else
                     let bufferRawName = bufname(bufferNR)
-                    let bufferName = empty(bufferRawName) ? '[No Name]' : bufferRawName
-                    let bufferLine = key . "\t" . bufferName
-                    call add(bufferNames, bufferLine)
+                    let bufferName = bufferRawName
+                    if empty(bufferRawName) && exists('g:litespace_show_unnamed') && g:litespace_show_unnamed
+                        let bufferName = '[No Name]'
+                    endif
+
+                    if !empty(bufferName)
+                        let briefName = fnamemodify(bufferName, ':t')
+                        let bufferLine = key . "\t" . briefName
+                        if bufferName !=? briefName
+                            let bufferLine = bufferLine . "\t" . bufferName
+                        endif
+                        call add(bufferNames, bufferLine)
+                    endif
                 endif
             endif
         endfor
@@ -101,7 +112,7 @@ function! s:ListBuffers()
         else
             rightbelow new
             wincmd J
-            let buffer_list_height = min([g:buffer_list_height, len(bufferNames)])
+            let buffer_list_height = min([g:litespace_buffer_list_height, len(bufferNames)])
             execute buffer_list_height . 'wincmd _'
 
             set modifiable
