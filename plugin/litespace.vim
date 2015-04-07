@@ -10,6 +10,7 @@ let g:loaded_litespace = 1
 " let g:litespace_buffer_list_height = 10
 " let g:litespace_show_unnamed = 0
 
+" Window manipulation
 function! s:MoveToWindow(windowNR)
   let windowCount = winnr('$')
   if a:windowNR > 0 && a:windowNR <= windowCount
@@ -24,6 +25,7 @@ function! s:MoveToWindow(windowNR)
   endif
 endfunction
 
+" Tab buffer list
 function! s:MaxBufferListHeight()
     return exists('g:litespace_buffer_list_height') ? g:litespace_buffer_list_height : 10
 endfunction
@@ -58,15 +60,27 @@ function! s:RemoveBuffer(bufferNR)
 endfunction
 
 function! s:RemoveListBuffersWindow(bufferNR)
+    let targetWindowNR = s:GetBufferTargetWindowNR(a:bufferNR)
     execute 'silent! bunload ' . a:bufferNR
     execute 'silent! bdelete ' . a:bufferNR
+    if targetWindowNR != -1
+        execute targetWindowNR . 'wincmd w'
+    endif
+endfunction
+
+function! s:BufferTargetWindowVariableName()
+    return 'litespace_target_window'
+endfunction
+
+function! s:GetBufferTargetWindowNR(bufferNR)
+    return getbufvar(a:bufferNR, s:BufferTargetWindowVariableName(), -1)
 endfunction
 
 function! s:OpenBuffer(splitBuffer)
     let entry = getline(line('.'))
     let parts = split(entry, "\t")
     let bufferNR = parts[0]
-    let targetWindowNR = getbufvar(bufnr('%'), 'litespace_target_window', -1)
+    let targetWindowNR = s:GetBufferTargetWindowNR(bufnr('%'))
     if targetWindowNR != -1
         execute targetWindowNR . 'wincmd w'
         if a:splitBuffer == 0
@@ -79,14 +93,12 @@ function! s:OpenBuffer(splitBuffer)
     endif
 endfunction
 
-function! s:ListBuffers()
+function! s:GetBufferNames()
+    let bufferNames = []
     let currentWindowNR = winnr()
     let currentWindowBufferNR = winbufnr(currentWindowNR)
     let bufferList = s:GetTabBufferList()
-    if empty(bufferList)
-        echom 'Buffer list is empty'
-    else
-        let bufferNames = []
+    if !empty(bufferList)
         for key in sort(keys(bufferList))
             let bufferNR = str2nr(key)
             if bufferNR != currentWindowBufferNR
@@ -110,36 +122,49 @@ function! s:ListBuffers()
                 endif
             endif
         endfor
-
-        if empty(bufferNames)
-            echom 'Buffer list is empty'
-        else
-            rightbelow new
-            wincmd J
-            let buffer_list_height = min([s:MaxBufferListHeight(), len(bufferNames)])
-            execute buffer_list_height . 'wincmd _'
-
-            set modifiable
-            call append(0, bufferNames)
-            normal ddgg
-
-            let bufferListNR = bufnr('%')
-            call setbufvar(bufferListNR, 'litespace_target_window', currentWindowNR)
-            call s:RemoveBuffer(bufferListNR)
-
-            autocmd BufLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
-            autocmd BufWinLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
-            nnoremap <buffer> <C-c> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-            nnoremap <buffer> <C-[> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-            nnoremap <buffer> <CR> :call <SID>OpenBuffer(0)<CR>
-            nnoremap <buffer> o :call <SID>OpenBuffer(0)<CR>
-            nnoremap <buffer> s :call <SID>OpenBuffer(1)<CR>
-            nnoremap <buffer> v :call <SID>OpenBuffer(2)<CR>
-
-            set buftype=nofile
-            set nomodifiable
-        endif
     endif
+    return bufferNames
+endfunction
+
+function! s:AddListBufferMappings()
+    autocmd BufLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
+    autocmd BufWinLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
+    nnoremap <buffer> <C-c> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+    nnoremap <buffer> <C-[> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+    nnoremap <buffer> <CR> :call <SID>OpenBuffer(0)<CR>
+    nnoremap <buffer> o :call <SID>OpenBuffer(0)<CR>
+    nnoremap <buffer> s :call <SID>OpenBuffer(1)<CR>
+    nnoremap <buffer> v :call <SID>OpenBuffer(2)<CR>
+endfunction
+
+function! s:DisplayBufferNames(bufferNames, targetWindowNR)
+    if empty(a:bufferNames)
+        echom 'Buffer list is empty'
+    else
+        rightbelow new
+        wincmd J
+        let buffer_list_height = min([s:MaxBufferListHeight(), len(a:bufferNames)])
+        execute buffer_list_height . 'wincmd _'
+
+        setlocal modifiable
+        call append(0, a:bufferNames)
+        normal ddgg
+
+        let bufferListNR = bufnr('%')
+        call setbufvar(bufferListNR, s:BufferTargetWindowVariableName(), a:targetWindowNR)
+        call s:RemoveBuffer(bufferListNR)
+
+        call s:AddListBufferMappings()
+
+        setlocal buftype=nofile
+        setlocal nomodifiable
+    endif
+endfunction
+
+function! s:ListBuffers()
+    let currentWindowNR = winnr()
+    let bufferNames = s:GetBufferNames()
+    call s:DisplayBufferNames(bufferNames, currentWindowNR)
 endfunction
 
 augroup LiteSpace
