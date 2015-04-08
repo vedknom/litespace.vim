@@ -73,9 +73,9 @@ function! s:ColumnPrimaryWindow()
         let bufferNR = windowBufferNRs[windowIndex]
         if bufferNR != -1
             if windowIndex == 1
-                rightbelow vnew
+                vnew
             else
-                rightbelow new
+                new
             endif
             wincmd =
             execute 'buffer ' . bufferNR
@@ -172,7 +172,7 @@ function! s:OpenBuffer(splitBuffer)
         elseif a:splitBuffer == 1
             execute 'split +buffer\ ' . bufferNR
         else
-            execute 'rightbelow vsplit +buffer\ ' . bufferNR
+            execute 'vsplit +buffer\ ' . bufferNR
         endif
     endif
 endfunction
@@ -234,7 +234,7 @@ function! s:DisplayBufferNames(bufferNames, targetWindowNR)
     if empty(a:bufferNames)
         echom 'Buffer list is empty'
     else
-        rightbelow new
+        new
         wincmd J
         let buffer_list_height = min([s:MaxBufferListHeight(), len(a:bufferNames)])
         execute buffer_list_height . 'wincmd _'
