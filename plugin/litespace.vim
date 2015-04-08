@@ -187,7 +187,8 @@ function! s:GetBufferNames()
             let bufferNR = str2nr(key)
             if bufferNR != currentWindowBufferNR
                 if !bufexists(bufferNR)
-                    echoerr 'Stale buffer was not removed from list ' . bufferNR
+                    echom 'Stale buffer was not removed from list ' . bufferNR
+                    unlet bufferList[key]
                 else
                     let bufferRawName = bufname(bufferNR)
                     let bufferName = bufferRawName
