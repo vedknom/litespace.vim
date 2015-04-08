@@ -214,13 +214,14 @@ endfunction
 function! s:AddListBuffersMappings()
     autocmd BufLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
     autocmd BufWinLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
-    nnoremap <buffer> <C-c> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-    nnoremap <buffer> <C-[> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-    nnoremap <buffer> <CR> :call <SID>OpenBuffer(0)<CR>
-    nnoremap <buffer> o :call <SID>OpenBuffer(0)<CR>
-    nnoremap <buffer> s :call <SID>OpenBuffer(1)<CR>
-    nnoremap <buffer> v :call <SID>OpenBuffer(2)<CR>
-    nnoremap <buffer> d :call <SID>RemoveCurrentBufferLineBufferNR()<CR>
+    nnoremap <silent> <buffer> <C-c> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+    nnoremap <silent> <buffer> <C-[> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+    nnoremap <silent> <buffer> q :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+    nnoremap <silent> <buffer> <CR> :call <SID>OpenBuffer(0)<CR>
+    nnoremap <silent> <buffer> o :call <SID>OpenBuffer(0)<CR>
+    nnoremap <silent> <buffer> s :call <SID>OpenBuffer(1)<CR>
+    nnoremap <silent> <buffer> v :call <SID>OpenBuffer(2)<CR>
+    nnoremap <silent> <buffer> d :call <SID>RemoveCurrentBufferLineBufferNR()<CR>
 endfunction
 
 function! s:RedisplayBufferNames(bufferNames)
@@ -268,12 +269,12 @@ augroup LiteSpace
   autocmd BufUnload * call <SID>RemoveBuffer(expand('<abuf>'))
 augroup END
 
-nnoremap <unique> <Leader>tn    :tabnew<CR>
-nnoremap <unique> <Leader>wm1   :call <SID>MoveToWindow(1)<CR>
-nnoremap <unique> <Leader>wm2   :call <SID>MoveToWindow(2)<CR>
-nnoremap <unique> <Leader>wm3   :call <SID>MoveToWindow(3)<CR>
-nnoremap <unique> <Leader>wm4   :call <SID>MoveToWindow(4)<CR>
-nnoremap <unique> <Leader>wnt   :tab split<CR>:rightbelow vnew<CR>:wincmd w<CR>
-nnoremap <unique> <Leader>wo    :call <SID>ColumnOnlyWindow()<CR>
-nnoremap <unique> <Leader>wp    :call <SID>ColumnPrimaryWindow()<CR>
-nnoremap <unique> <Leader>ls    :call <SID>ListBuffers()<CR>
+nnoremap <unique> <silent> <Leader>tn    :tabnew<CR>
+nnoremap <unique> <silent> <Leader>wm1   :call <SID>MoveToWindow(1)<CR>
+nnoremap <unique> <silent> <Leader>wm2   :call <SID>MoveToWindow(2)<CR>
+nnoremap <unique> <silent> <Leader>wm3   :call <SID>MoveToWindow(3)<CR>
+nnoremap <unique> <silent> <Leader>wm4   :call <SID>MoveToWindow(4)<CR>
+nnoremap <unique> <silent> <Leader>wnt   :tab split<CR>:vnew<CR>:wincmd w<CR>
+nnoremap <unique> <silent> <Leader>wo    :call <SID>ColumnOnlyWindow()<CR>
+nnoremap <unique> <silent> <Leader>wp    :call <SID>ColumnPrimaryWindow()<CR>
+nnoremap <unique> <silent> <Leader>ls    :call <SID>ListBuffers()<CR>
