@@ -267,6 +267,7 @@ augroup LiteSpace
   autocmd BufEnter * call <SID>AddBuffer()
   autocmd BufWinEnter * call <SID>AddBuffer()
   autocmd BufUnload * call <SID>RemoveBuffer(expand('<abuf>'))
+  autocmd FileType qf call <SID>RemoveBuffer(expand('<abuf>'))
 augroup END
 
 nnoremap <unique> <silent> <Leader>tn    :tabnew<CR>
