@@ -106,10 +106,20 @@ function! s:GetTabBufferList()
     return bufferList
 endfunction
 
+function! s:ClearTabBufferList()
+    let tabNR = tabpagenr()
+    call settabvar(tabNR, 'litespace_buffer_list', {})
+endfunction
+
+function! s:AddBufferNR(bufferNR)
+    let bufferNR = a:bufferNR
+    let bufferList = s:GetTabBufferList()
+    let bufferList[bufferNR] = bufferNR
+endfunction
+
 function! s:AddBuffer()
     let bufNR = expand('<abuf>')
-    let bufferList = s:GetTabBufferList()
-    let bufferList[bufNR] = bufNR
+    call s:AddBufferNR(bufNR)
 endfunction
 
 function! s:RemoveBuffer(bufferNR)
@@ -160,6 +170,29 @@ function! s:RemoveCurrentBufferLineBufferNR()
         call s:RemoveListBuffersWindow(bufferNR)
     endif
 endfunction
+
+function! s:RemoveAllBufferLineBufferNR()
+    let bufferNR = bufnr('%')
+    call s:ClearTabBufferList()
+    call s:RemoveListBuffersWindow(bufferNR)
+endfunction
+
+function! s:RefreshToCurrentTabBufferNR()
+    let bufferNR = bufnr('%')
+    let targetWindowNR = s:GetBufferTargetWindowNR(bufferNR)
+    call s:RemoveAllBufferLineBufferNR()
+    let windowCount = winnr('$')
+    let windowNR = 1
+    while windowNR <= windowCount
+        let bufferNR = winbufnr(windowNR)
+        if bufferNR != -1
+            call s:AddBufferNR(bufferNR)
+        endif
+        let windowNR = windowNR + 1
+    endwhile
+    call s:DisplayBufferNames(s:GetBufferNames(), targetWindowNR)
+endfunction
+
 
 function! s:OpenBuffer(splitBuffer)
     let bufferNR = s:GetCurrentBufferLineBufferNR()
@@ -221,6 +254,8 @@ function! s:AddListBuffersMappings()
     nnoremap <silent> <buffer> s :call <SID>OpenBuffer(1)<CR>
     nnoremap <silent> <buffer> v :call <SID>OpenBuffer(2)<CR>
     nnoremap <silent> <buffer> d :call <SID>RemoveCurrentBufferLineBufferNR()<CR>
+    nnoremap <silent> <buffer> D :call <SID>RemoveAllBufferLineBufferNR()<CR>
+    nnoremap <silent> <buffer> r :call <SID>RefreshToCurrentTabBufferNR()<CR>
 endfunction
 
 function! s:RedisplayBufferNames(bufferNames)
