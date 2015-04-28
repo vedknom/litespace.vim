@@ -275,8 +275,8 @@ nnoremap <unique> <silent> <Leader>wm1   :call <SID>MoveToWindow(1)<CR>
 nnoremap <unique> <silent> <Leader>wm2   :call <SID>MoveToWindow(2)<CR>
 nnoremap <unique> <silent> <Leader>wm3   :call <SID>MoveToWindow(3)<CR>
 nnoremap <unique> <silent> <Leader>wm4   :call <SID>MoveToWindow(4)<CR>
-nnoremap <unique> <silent> <Leader>wnt   :tab split<CR>
-nnoremap <unique> <silent> <Leader>wnst  :tab split<CR>:vnew<CR>:wincmd w<CR>
+nnoremap <unique> <silent> <Leader>wt    :tab split<CR>
+nnoremap <unique> <silent> <Leader>wS    :tab split<CR>:vnew<CR>:wincmd w<CR>
 nnoremap <unique> <silent> <Leader>wo    :call <SID>ColumnOnlyWindow()<CR>
 nnoremap <unique> <silent> <Leader>wp    :call <SID>ColumnPrimaryWindow()<CR>
 nnoremap <unique> <silent> <Leader>ls    :call <SID>ListBuffers()<CR>
