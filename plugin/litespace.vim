@@ -25,29 +25,28 @@ function! s:MoveToWindow(windowNR)
   endif
 endfunction
 
-function! s:CloseWindowsAbove()
+function! s:CloseWindows(movement)
     while 1
-        let preWindowNR = winnr()
-        wincmd k
-        let postWindowNR = winnr()
-        if preWindowNR == postWindowNR
+        let prevWinNR = winnr()
+        execute 'wincmd ' . a:movement
+        if winnr() == prevWinNR
+            break
+        endif
+    endwhile
+    while 1
+        if getwinvar(winnr(), 'litespace_keep_window', 0)
             break
         endif
         wincmd c
     endwhile
 endfunction
 
-function! s:CloseWindowsBelow()
-    let windowNR = winnr()
-    wincmd j
-    while winnr() != windowNR
-        wincmd c
-    endwhile
-endfunction
-
 function! s:ColumnOnlyWindow()
-    call s:CloseWindowsAbove()
-    call s:CloseWindowsBelow()
+    let windowNR = winnr()
+    call setwinvar(windowNR, 'litespace_keep_window', 1)
+    call s:CloseWindows('k')
+    call s:CloseWindows('j')
+    unlet w:litespace_keep_window
 endfunction
 
 function! s:WindowBufferNRs()
