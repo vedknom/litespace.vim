@@ -100,8 +100,11 @@ endfunction
 
 function! s:GetTabBufferList()
     let tabNR = tabpagenr()
-    let bufferList = gettabvar(tabNR, 'litespace_buffer_list', {})
-    if empty(bufferList)
+    let bufferList = {}
+    let bufferListVar = gettabvar(tabNR, 'litespace_buffer_list')
+    if type(bufferListVar) == type(bufferList)
+        let bufferList = bufferListVar
+    elseif empty(bufferListVar)
         call settabvar(tabNR, 'litespace_buffer_list', bufferList)
     endif
     return bufferList
