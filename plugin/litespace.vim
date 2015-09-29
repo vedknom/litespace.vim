@@ -5,6 +5,7 @@
 if (exists("g:loaded_litespace") && g:loaded_litespace) || &cp || v:version < 700
     finish
 endif
+
 let g:loaded_litespace = 1
 
 " let g:litespace_buffer_list_height = 10
@@ -64,7 +65,7 @@ function! s:ColumnPrimaryWindow()
     let currentWindowNR = winnr()
     let windowBufferNRs = s:WindowBufferNRs()
     call remove(windowBufferNRs, currentWindowNR)
-    echom join(windowBufferNRs)
+    " echom join(windowBufferNRs)
     wincmd o
     let restoreWindowBufferNR = winnr()
     let windowIndex = 1
@@ -72,7 +73,7 @@ function! s:ColumnPrimaryWindow()
         let bufferNR = windowBufferNRs[windowIndex]
         if bufferNR != -1
             if windowIndex == 1
-                vnew
+                rightbelow vnew
             else
                 new
             endif
