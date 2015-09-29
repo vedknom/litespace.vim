@@ -222,7 +222,7 @@ function! s:GetBufferNames()
         for key in sort(keys(bufferList))
             let bufferNR = str2nr(key)
             if bufferNR != currentWindowBufferNR
-                if !bufexists(bufferNR)
+                if !bufexists(bufferNR) || !buflisted(bufferNR)
                     " echom 'Stale buffer was not removed from list ' . bufferNR
                     unlet bufferList[key]
                 else
@@ -302,8 +302,8 @@ endfunction
 
 augroup LiteSpace
   autocmd!
-  autocmd BufEnter * call <SID>AddBuffer()
-  autocmd BufWinEnter * call <SID>AddBuffer()
+  autocmd BufEnter,BufWinEnter * call <SID>AddBuffer()
+  " autocmd BufUnload,BufDelete,BufWipeout * call <SID>RemoveBuffer(expand('<abuf>'))
   autocmd BufUnload * call <SID>RemoveBuffer(expand('<abuf>'))
   autocmd FileType qf call <SID>RemoveBuffer(expand('<abuf>'))
 augroup END
