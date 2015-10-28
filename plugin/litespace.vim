@@ -86,6 +86,16 @@ function! s:ColumnPrimaryWindow()
   execute restoreWindowBufferNR . 'wincmd w'
 endfunction
 
+" Entry
+function! s:EntryNew(name, path, bufnr)
+  let l:entry = {
+    \ 'name': a:name,
+    \ 'path': a:path,
+    \ 'bufnr': a:bufnr
+  \ }
+  return l:entry
+endfunction
+
 " Tab buffer list
 function! s:MaxBufferListHeight()
   return exists('g:litespace_buffer_list_height') ? g:litespace_buffer_list_height : 10
@@ -167,11 +177,7 @@ endfunction
 function! s:GetCurrentBufferLineEntry()
   let l:line = getline(line('.'))
   let l:parts = split(l:line, '\s*"\s*')
-  let l:entry = {
-    \ 'name': l:parts[0],
-    \ 'path': l:parts[1],
-    \ 'bufnr': l:parts[2],
-  \ }
+  let l:entry = s:EntryNew(l:parts[0], l:parts[1], l:parts[2])
   return l:entry
 endfunction
 
@@ -235,9 +241,8 @@ function! s:SortInts(lhs, rhs)
   return a:lhs - a:rhs
 endfunction
 
-function! s:GetBufferNames(bufferList)
-  let l:bufferNamesParts = []
-  let l:maxNameLength = 0
+function! s:EntriesFromBufferList(bufferList)
+  let l:bufferEntries = []
   let l:currentWindowNR = winnr()
   let l:currentWindowBufferNR = winbufnr(l:currentWindowNR)
   let l:bufferList = a:bufferList
@@ -257,22 +262,31 @@ function! s:GetBufferNames(bufferList)
 
           if !empty(l:bufferName)
             let l:briefName = fnamemodify(l:bufferName, ':t')
-            if len(l:briefName) > l:maxNameLength
-              let l:maxNameLength = len(l:briefName)
-            endif
-            let l:parts = [l:briefName, l:bufferName, l:key]
-            call add(l:bufferNamesParts, l:parts)
+            let l:entry = s:EntryNew(l:briefName, l:bufferName, l:key)
+            call add(l:bufferEntries, l:entry)
           endif
         endif
       endif
     endfor
   endif
+  return l:bufferEntries
+endfunction
+
+function! s:GetBufferNames(bufferList)
+  let l:bufferEntries = s:EntriesFromBufferList(a:bufferList)
+  let l:maxNameLength = 0
+  for l:entry in l:bufferEntries
+    if len(l:entry.name) > l:maxNameLength
+      let l:maxNameLength = len(l:entry.name)
+    endif
+  endfor
 
   let l:bufferNames = []
   let l:nameWidth = (((l:maxNameLength + 3) / 4) + 1) * 4
   let l:stringFormat = '%-' . l:nameWidth . 's"%s" %d'
-  for l:parts in l:bufferNamesParts
-    call add(l:bufferNames, printf(l:stringFormat, l:parts[0], l:parts[1], l:parts[2]))
+  for l:entry in l:bufferEntries
+    let l:line = printf(l:stringFormat, l:entry.name, l:entry.path, l:entry.bufnr)
+    call add(l:bufferNames, l:line)
   endfor
 
   return l:bufferNames
