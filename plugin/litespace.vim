@@ -165,14 +165,19 @@ function! s:GetBufferTargetWindowNR(bufferNR)
 endfunction
 
 function! s:GetCurrentBufferLineEntry()
-  let entry = getline(line('.'))
-  let parts = split(entry, "\t")
-  return parts
+  let l:line = getline(line('.'))
+  let l:parts = split(l:line, '\s*"\s*')
+  let l:entry = {
+    \ 'name': l:parts[0],
+    \ 'path': l:parts[1],
+    \ 'bufnr': l:parts[2],
+  \ }
+  return l:entry
 endfunction
 
 function! s:GetCurrentBufferLineBufferNR()
-  let parts = s:GetCurrentBufferLineEntry()
-  return parts[0]
+  let l:entry = s:GetCurrentBufferLineEntry()
+  return l:entry.bufnr
 endfunction
 
 function! s:RemoveCurrentBufferLineBufferNR()
@@ -231,37 +236,46 @@ function! s:SortInts(lhs, rhs)
 endfunction
 
 function! s:GetBufferNames(bufferList)
-  let bufferNames = []
-  let currentWindowNR = winnr()
-  let currentWindowBufferNR = winbufnr(currentWindowNR)
+  let l:bufferNamesParts = []
+  let l:maxNameLength = 0
+  let l:currentWindowNR = winnr()
+  let l:currentWindowBufferNR = winbufnr(l:currentWindowNR)
   let l:bufferList = a:bufferList
   if !empty(l:bufferList)
-    for key in sort(bufferList, function("s:SortInts"))
-      let bufferNR = str2nr(key)
-      if bufferNR != currentWindowBufferNR
-        if !bufexists(bufferNR) || !buflisted(bufferNR)
-          " echom 'Stale buffer was not removed from list ' . bufferNR
-          " unlet bufferList[key]
+    for l:key in sort(bufferList, function("s:SortInts"))
+      let l:bufferNR = str2nr(l:key)
+      if l:bufferNR != l:currentWindowBufferNR
+        if !bufexists(l:bufferNR) || !buflisted(l:bufferNR)
+          " echom 'Stale buffer was not removed from list ' . l:bufferNR
+          " unlet bufferList[l:key]
         else
-          let bufferRawName = bufname(bufferNR)
-          let bufferName = bufferRawName
+          let l:bufferRawName = bufname(l:bufferNR)
+          let l:bufferName = bufferRawName
           if empty(bufferRawName) && exists('g:litespace_show_unnamed') && g:litespace_show_unnamed
-            let bufferName = '[No Name]'
+            let l:bufferName = '[No Name]'
           endif
 
-          if !empty(bufferName)
-            let briefName = fnamemodify(bufferName, ':t')
-            let bufferLine = key . "\t" . briefName
-            if bufferName !=? briefName
-              let bufferLine = bufferLine . "\t" . bufferName
+          if !empty(l:bufferName)
+            let l:briefName = fnamemodify(l:bufferName, ':t')
+            if len(l:briefName) > l:maxNameLength
+              let l:maxNameLength = len(l:briefName)
             endif
-            call add(bufferNames, bufferLine)
+            let l:parts = [l:briefName, l:bufferName, l:key]
+            call add(l:bufferNamesParts, l:parts)
           endif
         endif
       endif
     endfor
   endif
-  return bufferNames
+
+  let l:bufferNames = []
+  let l:nameWidth = (((l:maxNameLength + 3) / 4) + 1) * 4
+  let l:stringFormat = '%-' . l:nameWidth . 's"%s" %d'
+  for l:parts in l:bufferNamesParts
+    call add(l:bufferNames, printf(l:stringFormat, l:parts[0], l:parts[1], l:parts[2]))
+  endfor
+
+  return l:bufferNames
 endfunction
 
 function! s:AddListBuffersMappings()
