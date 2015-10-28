@@ -265,18 +265,18 @@ function! s:GetBufferNames(bufferList)
 endfunction
 
 function! s:AddListBuffersMappings()
-  autocmd BufLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
-  autocmd BufWinLeave <buffer> call <SID>RemoveListBuffersWindow(expand('<abuf>'))
-  nnoremap <silent> <buffer> <C-c> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-  nnoremap <silent> <buffer> <C-[> :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-  nnoremap <silent> <buffer> q :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-  nnoremap <silent> <buffer> <CR> :call <SID>OpenBuffer(0)<CR>
-  nnoremap <silent> <buffer> o :call <SID>OpenBuffer(0)<CR>
-  nnoremap <silent> <buffer> s :call <SID>OpenBuffer(1)<CR>
-  nnoremap <silent> <buffer> v :call <SID>OpenBuffer(2)<CR>
-  nnoremap <silent> <buffer> d :call <SID>RemoveCurrentBufferLineBufferNR()<CR>
-  nnoremap <silent> <buffer> D :call <SID>RemoveAllBufferLineBufferNR()<CR>
-  nnoremap <silent> <buffer> r :call <SID>RefreshToCurrentTabBufferNR()<CR>
+  autocmd BufLeave      <buffer>    call <SID>RemoveListBuffersWindow(expand('<abuf>'))
+  autocmd BufWinLeave   <buffer>    call <SID>RemoveListBuffersWindow(expand('<abuf>'))
+  nnoremap <silent> <buffer> <C-c>  :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+  nnoremap <silent> <buffer> <C-[>  :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+  nnoremap <silent> <buffer> q      :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
+  nnoremap <silent> <buffer> <CR>   :call <SID>OpenBuffer(0)<CR>
+  nnoremap <silent> <buffer> o      :call <SID>OpenBuffer(0)<CR>
+  nnoremap <silent> <buffer> s      :call <SID>OpenBuffer(1)<CR>
+  nnoremap <silent> <buffer> v      :call <SID>OpenBuffer(2)<CR>
+  nnoremap <silent> <buffer> d      :call <SID>RemoveCurrentBufferLineBufferNR()<CR>
+  nnoremap <silent> <buffer> D      :call <SID>RemoveAllBufferLineBufferNR()<CR>
+  nnoremap <silent> <buffer> r      :call <SID>RefreshToCurrentTabBufferNR()<CR>
 endfunction
 
 function! s:RedisplayBufferNames(bufferNames)
@@ -334,14 +334,14 @@ augroup LiteSpace
   autocmd FileType qf call <SID>RemoveBuffer(expand('<abuf>'))
 augroup END
 
-nnoremap <unique> <silent> <Leader>tn  :tabnew<CR>
-nnoremap <unique> <silent> <Leader>wm1   :call <SID>MoveToWindow(1)<CR>
-nnoremap <unique> <silent> <Leader>wm2   :call <SID>MoveToWindow(2)<CR>
-nnoremap <unique> <silent> <Leader>wm3   :call <SID>MoveToWindow(3)<CR>
-nnoremap <unique> <silent> <Leader>wm4   :call <SID>MoveToWindow(4)<CR>
-nnoremap <unique> <silent> <Leader>wt  :tab split<CR>
-nnoremap <unique> <silent> <Leader>wS  :tab split<CR>:vnew<CR>:wincmd w<CR>
-nnoremap <unique> <silent> <Leader>wo  :call <SID>ColumnOnlyWindow()<CR>
-nnoremap <unique> <silent> <Leader>wp  :call <SID>ColumnPrimaryWindow()<CR>
-nnoremap <unique> <silent> <Leader>lsa  :call <SID>ListAllBuffers()<CR>
-nnoremap <unique> <silent> <Leader>lsl  :call <SID>ListTabBuffers()<CR>
+nnoremap <unique> <silent> <Leader>tn     :tabnew<CR>
+nnoremap <unique> <silent> <Leader>wm1    :call <SID>MoveToWindow(1)<CR>
+nnoremap <unique> <silent> <Leader>wm2    :call <SID>MoveToWindow(2)<CR>
+nnoremap <unique> <silent> <Leader>wm3    :call <SID>MoveToWindow(3)<CR>
+nnoremap <unique> <silent> <Leader>wm4    :call <SID>MoveToWindow(4)<CR>
+nnoremap <unique> <silent> <Leader>wt     :tab split<CR>
+nnoremap <unique> <silent> <Leader>wS     :tab split<CR>:vnew<CR>:wincmd w<CR>
+nnoremap <unique> <silent> <Leader>wo     :call <SID>ColumnOnlyWindow()<CR>
+nnoremap <unique> <silent> <Leader>wp     :call <SID>ColumnPrimaryWindow()<CR>
+nnoremap <unique> <silent> <Leader>lsa    :call <SID>ListAllBuffers()<CR>
+nnoremap <unique> <silent> <Leader>lsl    :call <SID>ListTabBuffers()<CR>
