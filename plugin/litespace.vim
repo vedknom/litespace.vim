@@ -86,175 +86,112 @@ function! s:ColumnPrimaryWindow()
   execute restoreWindowBufferNR . 'wincmd w'
 endfunction
 
+" State
+let s:state = {
+\ }
+
+let s:tab_buffer_set_key = 'litespace_buffer_set'
+
+" Utility
+function! s:SortInts(lhs, rhs)
+  return a:lhs - a:rhs
+endfunction
+
 " Entry
 function! s:EntryNew(name, path, bufnr)
-  let l:entry = {
+  let l:self = {
     \ 'name': a:name,
     \ 'path': a:path,
     \ 'bufnr': a:bufnr
   \ }
-  return l:entry
+  return l:self
 endfunction
 
-" Tab buffer list
-function! s:MaxBufferListHeight()
-  return exists('g:litespace_buffer_list_height') ? g:litespace_buffer_list_height : 10
-endfunction
-
-function! s:DebugBufferEvent(type)
-  echom 'type: ' . a:type
-  \ . ', afile: "' . expand('<afile>') . '"'
-  \ . ', #: ' . expand('<abuf>')
-  \ . ', tab: ' . tabpagenr()
-endfunction
-
-function! s:GetAllBufferList()
-  redir => l:allbufs
-    silent! buffers
-  redir END
-  let l:getbufnr = "substitute(v:val, '^[ ]*\\([0-9]*\\)[ ]*.*$', '\\1', 'g')"
-  let l:allbufnrs = map(split(l:allbufs, '\n'), l:getbufnr)
-  return l:allbufnrs
-endfunction
-
-function! s:GetTabBufferSet()
-  let tabNR = tabpagenr()
-  let bufferSet = {}
-  let bufferSetVar = gettabvar(tabNR, 'litespace_buffer_set')
-  if type(bufferSetVar) == type(bufferSet)
-    let bufferSet = bufferSetVar
-  elseif empty(bufferSetVar)
-    call settabvar(tabNR, 'litespace_buffer_set', bufferSet)
-  endif
-  return bufferSet " Set of bufnrs
-endfunction
-
-function! s:ClearTabBuffers()
-  let tabNR = tabpagenr()
-  call settabvar(tabNR, 'litespace_buffer_set', {})
-endfunction
-
-function! s:AddBufferNR(bufferNR)
-  let bufferNR = a:bufferNR
-  let bufferSet = s:GetTabBufferSet()
-  let bufferSet[bufferNR] = bufferNR
-endfunction
-
-function! s:GetTabBufferList()
-  let bufferSet = s:GetTabBufferSet()
-  return keys(bufferSet)
-endfunction
-
-function! s:AddBuffer()
-  let bufNR = expand('<abuf>')
-  call s:AddBufferNR(bufNR)
-endfunction
-
-function! s:RemoveBuffer(bufferNR)
-  let bufferSet = s:GetTabBufferSet()
-  if has_key(bufferSet, a:bufferNR)
-    unlet bufferSet[a:bufferNR]
-  endif
-endfunction
-
-function! s:RemoveListBuffersWindow(bufferNR)
-  let targetWindowNR = s:GetBufferTargetWindowNR(a:bufferNR)
-  execute 'silent! bunload ' . a:bufferNR
-  execute 'silent! bdelete ' . a:bufferNR
-  if targetWindowNR != -1
-    execute targetWindowNR . 'wincmd w'
-  endif
-endfunction
-
-function! s:BufferTargetWindowVariableName()
-  return 'litespace_target_window'
-endfunction
-
-function! s:GetBufferTargetWindowNR(bufferNR)
-  return getbufvar(a:bufferNR, s:BufferTargetWindowVariableName(), -1)
-endfunction
-
-function! s:GetCurrentBufferLineEntry()
+function! s:EntryFromCurrentLine()
   let l:line = getline(line('.'))
   let l:parts = split(l:line, '\s*"\s*')
   let l:entry = s:EntryNew(l:parts[0], l:parts[1], l:parts[2])
   return l:entry
 endfunction
 
-function! s:GetCurrentBufferLineBufferNR()
-  let l:entry = s:GetCurrentBufferLineEntry()
+function! s:EntryGetBufnrFromCurrentLine()
+  let l:entry = s:EntryFromCurrentLine()
   return l:entry.bufnr
 endfunction
 
-function! s:RemoveCurrentBufferLineBufferNR()
-  let bufferNR = bufnr('%')
-  let lineCount = line('$')
-  if lineCount > 0
-    call s:RemoveBuffer(s:GetCurrentBufferLineBufferNR())
-    setlocal modifiable
-    normal! dd
-    setlocal nomodifiable
+" BufferList
+function! s:BufferListNew()
+  let l:bufferList = {}
+  let l:bufferList.type = 'BufferList'
+  let l:bufferList.bufnrs = {}
+  return l:bufferList
+endfunction
+
+function! s:IsBufferListType(object)
+  let l:object = a:object
+  return type(l:object) == type({}) && get(l:object, 'type') == 'BufferList'
+endfunction
+
+function! s:BufferListFromCurrentTab()
+  let l:tabnr = tabpagenr()
+  let l:bufferListVar = gettabvar(l:tabnr, s:tab_buffer_set_key)
+  if !s:IsBufferListType(l:bufferListVar)
+    let l:bufferList = s:BufferListNew()
+    call settabvar(l:tabnr, s:tab_buffer_set_key, l:bufferList)
+  else
+    let l:bufferList = l:bufferListVar
   endif
-  if lineCount <= 1
-    call s:RemoveListBuffersWindow(bufferNR)
+  return l:bufferList
+endfunction
+
+function! s:BufferListFromAll()
+  let l:tabnr = tabpagenr()
+  redir => l:allbufs
+    silent! buffers
+  redir END
+  let l:getbufnr = "substitute(v:val, '^[ ]*\\([0-9]*\\)[ ]*.*$', '\\1', 'g')"
+  let l:allbufnrs = map(split(l:allbufs, '\n'), l:getbufnr)
+
+  let l:bufferList = s:BufferListNew()
+  for l:bufnr in l:allbufnrs
+    call s:bufferListAdd(l:bufferList, l:bufnr)
+  endfor
+  return l:bufferList
+endfunction
+
+function! s:bufferListAdd(self, bufnr)
+  let l:self = a:self
+  let l:bufnr = a:bufnr
+  let l:self.bufnrs[l:bufnr] = l:bufnr
+endfunction
+
+function! s:bufferListRemove(self, bufnr)
+  let l:self = a:self
+  let l:bufnr = a:bufnr
+  if has_key(l:self.bufnrs, l:bufnr)
+    unlet l:self.bufnrs[l:bufnr]
   endif
 endfunction
 
-function! s:RemoveAllBufferLineBufferNR()
-  let bufferNR = bufnr('%')
-  call s:ClearTabBuffers()
-  call s:RemoveListBuffersWindow(bufferNR)
+function! s:bufferListClear(self)
+  let l:self = a:self
+  let l:self.bufnrs = {}
 endfunction
 
-function! s:RefreshToCurrentTabBufferNR()
-  let bufferNR = bufnr('%')
-  let targetWindowNR = s:GetBufferTargetWindowNR(bufferNR)
-  call s:RemoveAllBufferLineBufferNR()
-  let windowCount = winnr('$')
-  let windowNR = 1
-  while windowNR <= windowCount
-    let bufferNR = winbufnr(windowNR)
-    if bufferNR != -1
-      call s:AddBufferNR(bufferNR)
-    endif
-    let windowNR = windowNR + 1
-  endwhile
-  call s:DisplayBufferList(s:GetTabBufferList(), targetWindowNR)
-endfunction
-
-function! s:OpenBuffer(splitBuffer)
-  let bufferNR = s:GetCurrentBufferLineBufferNR()
-  let targetWindowNR = s:GetBufferTargetWindowNR(bufnr('%'))
-  if targetWindowNR != -1
-    execute targetWindowNR . 'wincmd w'
-    if a:splitBuffer == 0
-      execute 'buffer ' . bufferNR
-    elseif a:splitBuffer == 1
-      execute 'split +buffer\ ' . bufferNR
-    else
-      execute 'vsplit +buffer\ ' . bufferNR
-    endif
-  endif
-endfunction
-
-function! s:SortInts(lhs, rhs)
-  return a:lhs - a:rhs
-endfunction
-
-function! s:EntriesFromBufferList(bufferList)
-  let l:bufferEntries = []
-  let l:currentWindowNR = winnr()
-  let l:currentWindowBufferNR = winbufnr(l:currentWindowNR)
-  let l:bufferList = a:bufferList
-  if !empty(l:bufferList)
-    for l:key in sort(bufferList, function("s:SortInts"))
-      let l:bufferNR = str2nr(l:key)
-      if l:bufferNR != l:currentWindowBufferNR
-        if !bufexists(l:bufferNR) || !buflisted(l:bufferNR)
-          " echom 'Stale buffer was not removed from list ' . l:bufferNR
-          " unlet bufferList[l:key]
+function! s:bufferListGetEntries(self, skipbufnr)
+  let l:self = a:self
+  let l:skipbufnr = a:skipbufnr
+  let l:entries = []
+  let l:bufnrs = keys(l:self.bufnrs)
+  if !empty(l:bufnrs)
+    for l:key in sort(l:bufnrs, function("s:SortInts"))
+      let l:bufnr = str2nr(l:key)
+      if l:bufnr != l:skipbufnr 
+        if !bufexists(l:bufnr) || !buflisted(l:bufnr)
+          " echom 'Stale buffer was not removed from list ' . l:bufnr
+          " unlet l:self[l:key]
         else
-          let l:bufferRawName = bufname(l:bufferNR)
+          let l:bufferRawName = bufname(l:bufnr)
           let l:bufferName = bufferRawName
           if empty(bufferRawName) && exists('g:litespace_show_unnamed') && g:litespace_show_unnamed
             let l:bufferName = '[No Name]'
@@ -263,103 +200,222 @@ function! s:EntriesFromBufferList(bufferList)
           if !empty(l:bufferName)
             let l:briefName = fnamemodify(l:bufferName, ':t')
             let l:entry = s:EntryNew(l:briefName, l:bufferName, l:key)
-            call add(l:bufferEntries, l:entry)
+            call add(l:entries, l:entry)
           endif
         endif
       endif
     endfor
   endif
-  return l:bufferEntries
+  return l:entries
 endfunction
 
-function! s:GetBufferNames(bufferList)
-  let l:bufferEntries = s:EntriesFromBufferList(a:bufferList)
+function! s:bufferListGetLines(self, skipbufnr)
+  let l:self = a:self
+  let l:skipbufnr = a:skipbufnr
+  let l:entries = s:bufferListGetEntries(l:self, l:skipbufnr)
   let l:maxNameLength = 0
-  for l:entry in l:bufferEntries
+  for l:entry in l:entries
     if len(l:entry.name) > l:maxNameLength
       let l:maxNameLength = len(l:entry.name)
     endif
   endfor
 
-  let l:bufferNames = []
+  let l:lines = []
   let l:nameWidth = (((l:maxNameLength + 3) / 4) + 1) * 4
   let l:stringFormat = '%-' . l:nameWidth . 's"%s" %d'
-  for l:entry in l:bufferEntries
+  for l:entry in l:entries
     let l:line = printf(l:stringFormat, l:entry.name, l:entry.path, l:entry.bufnr)
-    call add(l:bufferNames, l:line)
+    call add(l:lines, l:line)
   endfor
 
-  return l:bufferNames
+  return l:lines
 endfunction
 
-function! s:AddListBuffersMappings()
-  autocmd BufLeave      <buffer>    call <SID>RemoveListBuffersWindow(expand('<abuf>'))
-  autocmd BufWinLeave   <buffer>    call <SID>RemoveListBuffersWindow(expand('<abuf>'))
-  nnoremap <silent> <buffer> <C-c>  :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-  nnoremap <silent> <buffer> <C-[>  :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-  nnoremap <silent> <buffer> q      :call <SID>RemoveListBuffersWindow(bufnr('%'))<CR>
-  nnoremap <silent> <buffer> <CR>   :call <SID>OpenBuffer(0)<CR>
-  nnoremap <silent> <buffer> o      :call <SID>OpenBuffer(0)<CR>
-  nnoremap <silent> <buffer> s      :call <SID>OpenBuffer(1)<CR>
-  nnoremap <silent> <buffer> v      :call <SID>OpenBuffer(2)<CR>
-  nnoremap <silent> <buffer> d      :call <SID>RemoveCurrentBufferLineBufferNR()<CR>
-  nnoremap <silent> <buffer> D      :call <SID>RemoveAllBufferLineBufferNR()<CR>
-  nnoremap <silent> <buffer> r      :call <SID>RefreshToCurrentTabBufferNR()<CR>
+" ListWindow
+function! s:ListWindowMaxHeight()
+  return exists('g:litespace_buffer_list_height') ? g:litespace_buffer_list_height : 10
 endfunction
 
-function! s:RedisplayBufferNames(bufferNames)
-  setlocal modifiable
-  normal ggdG
-  call append(0, a:bufferNames)
-  normal ddgg
-  setlocal nomodifiable
+function! s:ListWindowNew()
+  let l:self = {
+    \ 'srcwinnr': -1
+  \ }
+  return l:self
 endfunction
 
-function! s:DisplayBufferNames(bufferNames, targetWindowNR)
-  if empty(a:bufferNames)
+function! s:ListWindowInstance()
+  let l:key = 'window'
+  if !has_key(s:state, l:key)
+    let s:state[l:key] = s:ListWindowNew()
+  endif
+  return s:state[l:key]
+endfunction
+
+function! s:ListWindowDisplay(bufferList, srcwinnr)
+  let l:self = s:ListWindowInstance()
+  let l:shown = l:self.srcwinnr != -1
+  let l:srcwinnr = l:shown ? l:self.srcwinnr : a:srcwinnr
+  let l:buflist = a:bufferList
+  if l:shown
+    call s:ListWindowRemove(bufnr('%'))
+    return s:ListWindowDisplay(l:buflist, l:srcwinnr)
+  endif
+
+  let l:skipbufnr = winbufnr(l:srcwinnr)
+  let l:lines = s:bufferListGetLines(l:buflist, l:skipbufnr)
+  if empty(l:lines)
     echom 'Buffer list is empty'
+    let l:self.srcwinnr = -1
   else
-    new
-    wincmd J
-    let buffer_list_height = min([s:MaxBufferListHeight(), len(a:bufferNames)])
-    execute buffer_list_height . 'wincmd _'
+    botright new
+    let l:self.srcwinnr = l:srcwinnr
+    let l:self.buflist = l:buflist
+    let l:winheigt = min([s:ListWindowMaxHeight(), len(l:lines)])
+    execute l:winheigt . 'wincmd _'
 
     setlocal modifiable
     normal ggdG
-    call append(0, a:bufferNames)
+    call append(0, l:lines)
     normal ddgg
 
-    let bufferListNR = bufnr('%')
-    call setbufvar(bufferListNR, s:BufferTargetWindowVariableName(), a:targetWindowNR)
-    call s:RemoveBuffer(bufferListNR)
-
-    call s:AddListBuffersMappings()
+    call s:bufferListRemove(l:self.buflist, bufnr('%'))
+    call s:ListWindowSetupMappings()
 
     setlocal buftype=nofile
     setlocal nomodifiable
   endif
 endfunction
 
-function! s:DisplayBufferList(bufferList, targetWindowNR)
-  call s:DisplayBufferNames(s:GetBufferNames(a:bufferList), a:targetWindowNR)
+function! s:ListWindowRemove(bufnr)
+  let l:self = s:ListWindowInstance()
+  let l:bufnr = a:bufnr
+
+  silent execute 'silent! bunload ' . a:bufnr
+  silent execute 'silent! bdelete ' . a:bufnr
+  if l:self.srcwinnr != -1
+    execute l:self.srcwinnr . 'wincmd w'
+    let l:self.srcwinnr = -1
+  endif
 endfunction
 
-function! s:ListTabBuffers()
-  let currentWindowNR = winnr()
-  call s:DisplayBufferList(s:GetTabBufferList(), currentWindowNR)
+function! s:ListWindowOpenSelectedBuffer(splitStyle)
+  let l:self = s:ListWindowInstance()
+  let l:bufnr = s:EntryGetBufnrFromCurrentLine()
+  let l:splitStyle = a:splitStyle
+
+  if l:self.srcwinnr != -1
+    execute l:self.srcwinnr . 'wincmd w'
+    if l:splitStyle == 0
+      execute 'buffer ' . l:bufnr
+    elseif l:splitStyle == 1
+      execute 'split +buffer\ ' . l:bufnr
+    else
+      execute 'vsplit +buffer\ ' . l:bufnr
+    endif
+  endif
 endfunction
 
-function! s:ListAllBuffers()
-  let currentWindowNR = winnr()
-  call s:DisplayBufferList(s:GetAllBufferList(), currentWindowNR)
+function! s:ListWindowRemoveSelectedBuffer()
+  let l:bufnr = bufnr('%')
+  let l:lineCount = line('$')
+
+  let l:self = s:ListWindowInstance()
+  if l:lineCount > 0
+    let l:buflist = l:self.buflist
+    let l:rmbufnr = s:EntryGetBufnrFromCurrentLine()
+    call s:bufferListRemove(l:buflist, l:rmbufnr)
+    setlocal modifiable
+    normal! dd
+    setlocal nomodifiable
+  endif
+  if l:lineCount <= 1
+    call s:ListWindowRemove(l:bufnr)
+  endif
 endfunction
 
+function! s:ListWindowRemoveAllBuffers()
+  let l:bufnr = bufnr('%')
+
+  let l:self = s:ListWindowInstance()
+  let l:buflist = l:self.buflist
+  call s:bufferListClear(l:buflist)
+  call s:ListWindowRemove(l:bufnr)
+endfunction
+
+function! s:ListWindowRefreshToCurrentTab()
+  let l:bufnr = bufnr('%')
+  let windowCount = winnr('$')
+
+  let l:self = s:ListWindowInstance()
+  let l:buflist = l:self.buflist
+  let l:srcwinnr = l:self.srcwinnr
+  call s:ListWindowRemoveAllBuffers()
+  let l:winnr = 1
+  while l:winnr <= windowCount
+    let l:bufnr = winbufnr(l:winnr)
+    if l:bufnr != -1
+      call s:bufferListAdd(l:buflist, l:bufnr)
+    endif
+    let l:winnr = l:winnr + 1
+  endwhile
+  call s:ListWindowDisplay(l:buflist, l:srcwinnr)
+endfunction
+
+function! s:ListWindowSetupMappings()
+  autocmd BufLeave      <buffer>    call  <SID>ListWindowRemove(expand('<abuf>'))
+  autocmd BufWinLeave   <buffer>    call  <SID>ListWindowRemove(expand('<abuf>'))
+  nnoremap <silent> <buffer> <C-c>  :call <SID>ListWindowRemove(bufnr('%'))<CR>
+  nnoremap <silent> <buffer> <C-[>  :call <SID>ListWindowRemove(bufnr('%'))<CR>
+  nnoremap <silent> <buffer> q      :call <SID>ListWindowRemove(bufnr('%'))<CR>
+  nnoremap <silent> <buffer> <CR>   :call <SID>ListWindowOpenSelectedBuffer(0)<CR>
+  nnoremap <silent> <buffer> o      :call <SID>ListWindowOpenSelectedBuffer(0)<CR>
+  nnoremap <silent> <buffer> s      :call <SID>ListWindowOpenSelectedBuffer(1)<CR>
+  nnoremap <silent> <buffer> v      :call <SID>ListWindowOpenSelectedBuffer(2)<CR>
+  nnoremap <silent> <buffer> d      :call <SID>ListWindowRemoveSelectedBuffer()<CR>
+  nnoremap <silent> <buffer> D      :call <SID>ListWindowRemoveAllBuffers()<CR>
+  nnoremap <silent> <buffer> r      :call <SID>ListWindowRefreshToCurrentTab()<CR>
+endfunction
+
+function! s:ListWindowDisplayTabBufferList()
+  call s:ListWindowDisplay(s:BufferListFromCurrentTab(), winnr())
+endfunction
+
+function! s:ListWindowDisplayAllBufferList()
+  call s:ListWindowDisplay(s:LiteSpaceGetAllBufferList(), winnr())
+endfunction
+
+" LiteSpace
+function! s:LiteSpaceGetAllBufferList()
+  let l:key = 'all'
+  if !has_key(s:state, l:key)
+    let s:state[l:key] = s:BufferListFromAll()
+  endif
+  return s:state[l:key]
+endfunction
+
+function! s:LiteSpaceAddBufnr(bufnr)
+  let l:bufnr = a:bufnr
+  let l:tabbuflist = s:BufferListFromCurrentTab()
+  call s:bufferListAdd(l:tabbuflist, l:bufnr)
+  let l:allbuflist = s:LiteSpaceGetAllBufferList()
+  call s:bufferListAdd(l:allbuflist, l:bufnr)
+endfunction
+
+function! s:LiteSpaceRemoveBufnr(bufnr)
+  let l:bufnr = a:bufnr
+  let l:tabbuflist = s:BufferListFromCurrentTab()
+  call s:bufferListRemove(l:tabbuflist, l:bufnr)
+  let l:allbuflist = s:LiteSpaceGetAllBufferList()
+  call s:bufferListRemove(l:allbuflist, l:bufnr)
+endfunction
+
+" LiteSpace
 augroup LiteSpace
   autocmd!
-  autocmd BufEnter,BufWinEnter * call <SID>AddBuffer()
-  " autocmd BufUnload,BufDelete,BufWipeout * call <SID>RemoveBuffer(expand('<abuf>'))
-  autocmd BufUnload * call <SID>RemoveBuffer(expand('<abuf>'))
-  autocmd FileType qf call <SID>RemoveBuffer(expand('<abuf>'))
+  autocmd BufEnter,BufWinEnter * call <SID>LiteSpaceAddBufnr(expand('<abuf>'))
+  " autocmd BufUnload,BufDelete,BufWipeout * call <SID>LiteSpaceRemoveBufnr(expand('<abuf>'))
+  autocmd BufUnload * call <SID>LiteSpaceRemoveBufnr(expand('<abuf>'))
+  autocmd FileType qf call <SID>LiteSpaceRemoveBufnr(expand('<abuf>'))
 augroup END
 
 nnoremap <unique> <silent> <Leader>tn     :tabnew<CR>
@@ -371,5 +427,5 @@ nnoremap <unique> <silent> <Leader>wt     :tab split<CR>
 nnoremap <unique> <silent> <Leader>wS     :tab split<CR>:vnew<CR>:wincmd w<CR>
 nnoremap <unique> <silent> <Leader>wo     :call <SID>ColumnOnlyWindow()<CR>
 nnoremap <unique> <silent> <Leader>wp     :call <SID>ColumnPrimaryWindow()<CR>
-nnoremap <unique> <silent> <Leader>lsa    :call <SID>ListAllBuffers()<CR>
-nnoremap <unique> <silent> <Leader>lsl    :call <SID>ListTabBuffers()<CR>
+nnoremap <unique> <silent> <Leader>lsa    :call <SID>ListWindowDisplayAllBufferList()<CR>
+nnoremap <unique> <silent> <Leader>lsl    :call <SID>ListWindowDisplayTabBufferList()<CR>
