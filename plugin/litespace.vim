@@ -241,12 +241,95 @@ function! s:bufferListGetLines(self, skipbufnr)
   return l:lines
 endfunction
 
+" Space
+function! s:SpaceDirectory()
+  return '.litespace'
+endfunction
+
+function! s:SpaceFilePathFor(filename)
+  let l:directory = s:SpaceDirectory()
+  let l:filename = a:filename
+  let l:filepath = printf('%s/%s', directory, l:filename)
+  return l:filepath
+endfunction
+
+function! s:SpaceWithBufferList(bufferList)
+  let l:bufferList = a:bufferList
+  let l:entries = s:bufferListGetEntries(l:bufferList, -1)
+  let l:paths = map(l:entries, "v:val.path")
+  return s:SpaceNew(l:paths)
+endfunction
+
+function! s:SpaceLoadFrom(spacename, mustexist)
+  let l:spacename = a:spacename
+  let l:mustexist = a:mustexist
+  let l:paths = []
+  if !empty(l:spacename)
+    let l:filepath = s:SpaceFilePathFor(l:spacename)
+    if filereadable(l:filepath)
+      let l:paths = readfile(l:filepath)
+    elseif l:mustexist
+      echoerr 'File is not readable ' . l:filepath
+    endif
+  endif
+  let l:self = s:SpaceNew(l:paths)
+  return l:self
+endfunction
+
+function! s:SpaceNew(paths)
+  let l:paths = a:paths
+  let l:self = {
+    \ 'paths': copy(l:paths)
+  \ }
+  return l:self
+endfunction
+
+function! s:spaceSave(self, filename)
+  let l:self = a:self
+  let l:filename = a:filename
+  let l:filepath = s:SpaceFilePathFor(l:filename)
+
+  let l:directory = s:SpaceDirectory()
+  if !isdirectory(l:directory)
+    if filereadable(l:directory)
+      echoerr l:directory . ' exists as a file!'
+      return
+    endif
+    call mkdir(l:directory, 'p')
+  endif
+
+  call writefile(l:self.paths, l:filepath)
+endfunction
+
+function! s:spaceAddPath(self, path)
+  let l:self = a:self
+  let l:path = a:path
+  let l:paths = l:self.paths 
+  let l:self.paths = sort(add(l:paths, l:path))
+endfunction
+
+function! s:spaceLoadBuffers(self)
+  let l:self = a:self
+  let l:oldbufnr = bufnr('%')
+
+  let l:paths = l:self.paths
+  for l:path in l:paths
+    let l:strippped = l:path
+    let l:strippped = substitute(l:strippped, '^\s*', '', '')
+    let l:strippped = substitute(l:strippped, '\s*$', '', '')
+    execute 'edit ' . escape(l:strippped, ' ')
+  endfor
+
+  execute 'buffer ' . l:oldbufnr
+endfunction
+
 " ListWindow
 function! s:ListWindowMaxHeight()
   return exists('g:litespace_buffer_list_height') ? g:litespace_buffer_list_height : 10
 endfunction
 
 function! s:ListWindowNew()
+  " .bufferList
   let l:self = {
     \ 'srcwinnr': -1
   \ }
@@ -384,6 +467,7 @@ function! s:ListWindowSetupMappings()
   nnoremap <silent> <buffer> d      :call <SID>ListWindowRemoveSelectedBuffer()<CR>
   nnoremap <silent> <buffer> D      :call <SID>ListWindowRemoveAllBuffers()<CR>
   nnoremap <silent> <buffer> r      :call <SID>ListWindowRefreshToCurrentTab()<CR>
+  nnoremap <silent> <buffer> S      :call <SID>ListWindowSaveSpace()<CR>
 endfunction
 
 function! s:ListWindowDisplayTabBufferList()
@@ -392,6 +476,15 @@ endfunction
 
 function! s:ListWindowDisplayAllBufferList()
   call s:ListWindowDisplay(s:LiteSpaceGetAllBufferList(), winnr())
+endfunction
+
+function! s:ListWindowSaveSpace()
+  let l:self = s:ListWindowInstance()
+  let l:space = s:SpaceWithBufferList(l:self.bufferList)
+  let l:filename = input('Save space name: ')
+  if len(l:filename) > 0
+    call s:spaceSave(l:space, l:filename)
+  endif
 endfunction
 
 " LiteSpace
@@ -419,6 +512,41 @@ function! s:LiteSpaceRemoveBufnr(bufnr)
   call s:bufferListRemove(l:allbuflist, l:bufnr)
 endfunction
 
+function! s:LiteSpacePromptSpaceName(action)
+  let l:action = a:action
+  let l:oldpath = &path
+  let l:oldwildmenu = &wildmenu
+  let l:directory = s:SpaceDirectory()
+  let &wildmenu = 1
+  execute 'setlocal path=' . l:directory
+  let l:spacename = input(l:action . ' space named: ', '', 'file_in_path')
+  execute 'setlocal path=' . l:oldpath 
+  let &wildmenu = l:oldwildmenu
+  return l:spacename
+endfunction
+
+function! s:LiteSpacePromptLoadSpace()
+  let l:oldbufnr = bufnr('%')
+  let l:spacename = s:LiteSpacePromptSpaceName('Load')
+  if !empty(l:spacename)
+    let l:space = s:SpaceLoadFrom(l:spacename, 1)
+    call s:spaceLoadBuffers(l:space)
+  endif
+endfunction
+
+function! s:LiteSpacePromptAppendToSpace()
+  let l:spacename = s:LiteSpacePromptSpaceName('Append')
+  if !empty(l:spacename)
+    let l:bufnr = bufnr('%')
+    let l:bufferName = bufname(l:bufnr)
+    if !empty(l:bufferName)
+      let l:space = s:SpaceLoadFrom(l:spacename, 0)
+      call s:spaceAddPath(l:space, l:bufferName)
+      call s:spaceSave(l:space, l:spacename)
+    endif
+  endif
+endfunction
+
 " LiteSpace
 augroup LiteSpace
   autocmd!
@@ -444,3 +572,5 @@ nnoremap <unique> <silent> <Leader>wph    :call <SID>ColumnPrimaryWindowVertical
 
 nnoremap <unique> <silent> <Leader>lsa    :call <SID>ListWindowDisplayAllBufferList()<CR>
 nnoremap <unique> <silent> <Leader>lsl    :call <SID>ListWindowDisplayTabBufferList()<CR>
+nnoremap <unique> <silent> <Leader>lss    :call <SID>LiteSpacePromptLoadSpace()<CR>
+nnoremap <unique> <silent> <Leader>lsp    :call <SID>LiteSpacePromptAppendToSpace()<CR>
