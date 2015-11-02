@@ -62,28 +62,38 @@ function! s:WindowBufferNRs()
   return windowBufferNRs
 endfunction
 
-function! s:ColumnPrimaryWindow()
-  let currentWindowNR = winnr()
-  let windowBufferNRs = s:WindowBufferNRs()
-  call remove(windowBufferNRs, currentWindowNR)
-  " echom join(windowBufferNRs)
+function! s:ColumnPrimaryWindowWith(primary, other)
+  let l:primary = a:primary
+  let l:other = a:other
+  let l:curwinnr = winnr()
+  let l:winbufnrs = s:WindowBufferNRs()
+  call remove(l:winbufnrs, l:curwinnr)
+  " echom join(l:winbufnrs)
   wincmd o
-  let restoreWindowBufferNR = winnr()
-  let windowIndex = 1
-  while windowIndex < len(windowBufferNRs)
-    let bufferNR = windowBufferNRs[windowIndex]
-    if bufferNR != -1
-      if windowIndex == 1
-        rightbelow vnew
+  let l:restorewinnr = winnr()
+  let l:windowIndex = 1
+  while l:windowIndex < len(l:winbufnrs)
+    let l:bufnr = l:winbufnrs[l:windowIndex]
+    if l:bufnr != -1
+      if l:windowIndex == 1
+        execute l:primary
       else
-        new
+        execute l:other
       endif
       wincmd =
-      execute 'buffer ' . bufferNR
-      let windowIndex += 1
+      execute 'buffer ' . l:bufnr
+      let l:windowIndex += 1
     endif
   endwhile
-  execute restoreWindowBufferNR . 'wincmd w'
+  execute l:restorewinnr . 'wincmd w'
+endfunction
+
+function! s:ColumnPrimaryWindowHorizontal()
+  call s:ColumnPrimaryWindowWith('rightbelow new', 'leftabove vnew')
+endfunction
+
+function! s:ColumnPrimaryWindowVertical()
+  call s:ColumnPrimaryWindowWith('rightbelow vnew', 'leftabove new')
 endfunction
 
 " State
@@ -419,13 +429,18 @@ augroup LiteSpace
 augroup END
 
 nnoremap <unique> <silent> <Leader>tn     :tabnew<CR>
+nnoremap <unique> <silent> <Leader>wt     :tab split<CR>
+nnoremap <unique> <silent> <Leader>ws     :tab split<CR>:rightbelow new<CR>:wincmd w<CR>
+nnoremap <unique> <silent> <Leader>wv     :tab split<CR>:rightbelow vnew<CR>:wincmd w<CR>
+
 nnoremap <unique> <silent> <Leader>wm1    :call <SID>MoveToWindow(1)<CR>
 nnoremap <unique> <silent> <Leader>wm2    :call <SID>MoveToWindow(2)<CR>
 nnoremap <unique> <silent> <Leader>wm3    :call <SID>MoveToWindow(3)<CR>
 nnoremap <unique> <silent> <Leader>wm4    :call <SID>MoveToWindow(4)<CR>
-nnoremap <unique> <silent> <Leader>wt     :tab split<CR>
-nnoremap <unique> <silent> <Leader>wS     :tab split<CR>:vnew<CR>:wincmd w<CR>
+
 nnoremap <unique> <silent> <Leader>wo     :call <SID>ColumnOnlyWindow()<CR>
-nnoremap <unique> <silent> <Leader>wp     :call <SID>ColumnPrimaryWindow()<CR>
+nnoremap <unique> <silent> <Leader>wpk    :call <SID>ColumnPrimaryWindowHorizontal()<CR>
+nnoremap <unique> <silent> <Leader>wph    :call <SID>ColumnPrimaryWindowVertical()<CR>
+
 nnoremap <unique> <silent> <Leader>lsa    :call <SID>ListWindowDisplayAllBufferList()<CR>
 nnoremap <unique> <silent> <Leader>lsl    :call <SID>ListWindowDisplayTabBufferList()<CR>
