@@ -265,21 +265,21 @@ function! s:ListWindowDisplay(bufferList, srcwinnr)
   let l:self = s:ListWindowInstance()
   let l:shown = l:self.srcwinnr != -1
   let l:srcwinnr = l:shown ? l:self.srcwinnr : a:srcwinnr
-  let l:buflist = a:bufferList
+  let l:bufferList = a:bufferList
   if l:shown
     call s:ListWindowRemove(bufnr('%'))
-    return s:ListWindowDisplay(l:buflist, l:srcwinnr)
+    return s:ListWindowDisplay(l:bufferList, l:srcwinnr)
   endif
 
   let l:skipbufnr = winbufnr(l:srcwinnr)
-  let l:lines = s:bufferListGetLines(l:buflist, l:skipbufnr)
+  let l:lines = s:bufferListGetLines(l:bufferList, l:skipbufnr)
   if empty(l:lines)
     echom 'Buffer list is empty'
     let l:self.srcwinnr = -1
   else
     botright new
     let l:self.srcwinnr = l:srcwinnr
-    let l:self.buflist = l:buflist
+    let l:self.bufferList = l:bufferList
     let l:winheigt = min([s:ListWindowMaxHeight(), len(l:lines)])
     execute l:winheigt . 'wincmd _'
 
@@ -288,7 +288,7 @@ function! s:ListWindowDisplay(bufferList, srcwinnr)
     call append(0, l:lines)
     normal ddgg
 
-    call s:bufferListRemove(l:self.buflist, bufnr('%'))
+    call s:bufferListRemove(l:self.bufferList, bufnr('%'))
     call s:ListWindowSetupMappings()
 
     setlocal buftype=nofile
@@ -331,9 +331,9 @@ function! s:ListWindowRemoveSelectedBuffer()
 
   let l:self = s:ListWindowInstance()
   if l:lineCount > 0
-    let l:buflist = l:self.buflist
+    let l:bufferList = l:self.bufferList
     let l:rmbufnr = s:EntryGetBufnrFromCurrentLine()
-    call s:bufferListRemove(l:buflist, l:rmbufnr)
+    call s:bufferListRemove(l:bufferList, l:rmbufnr)
     setlocal modifiable
     normal! dd
     setlocal nomodifiable
@@ -347,8 +347,8 @@ function! s:ListWindowRemoveAllBuffers()
   let l:bufnr = bufnr('%')
 
   let l:self = s:ListWindowInstance()
-  let l:buflist = l:self.buflist
-  call s:bufferListClear(l:buflist)
+  let l:bufferList = l:self.bufferList
+  call s:bufferListClear(l:bufferList)
   call s:ListWindowRemove(l:bufnr)
 endfunction
 
@@ -357,18 +357,18 @@ function! s:ListWindowRefreshToCurrentTab()
   let windowCount = winnr('$')
 
   let l:self = s:ListWindowInstance()
-  let l:buflist = l:self.buflist
+  let l:bufferList = l:self.bufferList
   let l:srcwinnr = l:self.srcwinnr
   call s:ListWindowRemoveAllBuffers()
   let l:winnr = 1
   while l:winnr <= windowCount
     let l:bufnr = winbufnr(l:winnr)
     if l:bufnr != -1
-      call s:bufferListAdd(l:buflist, l:bufnr)
+      call s:bufferListAdd(l:bufferList, l:bufnr)
     endif
     let l:winnr = l:winnr + 1
   endwhile
-  call s:ListWindowDisplay(l:buflist, l:srcwinnr)
+  call s:ListWindowDisplay(l:bufferList, l:srcwinnr)
 endfunction
 
 function! s:ListWindowSetupMappings()
