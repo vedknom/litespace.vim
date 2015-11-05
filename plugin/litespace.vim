@@ -475,7 +475,7 @@ function! s:ListWindowDisplayTabBufferList()
 endfunction
 
 function! s:ListWindowDisplayAllBufferList()
-  call s:ListWindowDisplay(s:LiteSpaceGetAllBufferList(), winnr())
+  call s:ListWindowDisplay(s:LitespaceGetAllBufferList(), winnr())
 endfunction
 
 function! s:ListWindowSaveSpace()
@@ -487,8 +487,8 @@ function! s:ListWindowSaveSpace()
   endif
 endfunction
 
-" LiteSpace
-function! s:LiteSpaceGetAllBufferList()
+" Litespace
+function! s:LitespaceGetAllBufferList()
   let l:key = 'all'
   if !has_key(s:state, l:key)
     let s:state[l:key] = s:BufferListFromAll()
@@ -496,23 +496,23 @@ function! s:LiteSpaceGetAllBufferList()
   return s:state[l:key]
 endfunction
 
-function! s:LiteSpaceAddBufnr(bufnr)
+function! s:LitespaceAddBufnr(bufnr)
   let l:bufnr = a:bufnr
   let l:tabbuflist = s:BufferListFromCurrentTab()
   call s:bufferListAdd(l:tabbuflist, l:bufnr)
-  let l:allbuflist = s:LiteSpaceGetAllBufferList()
+  let l:allbuflist = s:LitespaceGetAllBufferList()
   call s:bufferListAdd(l:allbuflist, l:bufnr)
 endfunction
 
-function! s:LiteSpaceRemoveBufnr(bufnr)
+function! s:LitespaceRemoveBufnr(bufnr)
   let l:bufnr = a:bufnr
   let l:tabbuflist = s:BufferListFromCurrentTab()
   call s:bufferListRemove(l:tabbuflist, l:bufnr)
-  let l:allbuflist = s:LiteSpaceGetAllBufferList()
+  let l:allbuflist = s:LitespaceGetAllBufferList()
   call s:bufferListRemove(l:allbuflist, l:bufnr)
 endfunction
 
-function! s:LiteSpacePromptSpaceName(action)
+function! s:LitespacePromptSpaceName(action)
   let l:action = a:action
   let l:oldpath = &path
   let l:oldwildmenu = &wildmenu
@@ -525,17 +525,17 @@ function! s:LiteSpacePromptSpaceName(action)
   return l:spacename
 endfunction
 
-function! s:LiteSpacePromptLoadSpace()
+function! s:LitespacePromptLoadSpace()
   let l:oldbufnr = bufnr('%')
-  let l:spacename = s:LiteSpacePromptSpaceName('Load')
+  let l:spacename = s:LitespacePromptSpaceName('Load')
   if !empty(l:spacename)
     let l:space = s:SpaceLoadFrom(l:spacename, 1)
     call s:spaceLoadBuffers(l:space)
   endif
 endfunction
 
-function! s:LiteSpacePromptAppendToSpace()
-  let l:spacename = s:LiteSpacePromptSpaceName('Append')
+function! s:LitespacePromptAppendToSpace()
+  let l:spacename = s:LitespacePromptSpaceName('Append')
   if !empty(l:spacename)
     let l:bufnr = bufnr('%')
     let l:bufferName = bufname(l:bufnr)
@@ -547,13 +547,13 @@ function! s:LiteSpacePromptAppendToSpace()
   endif
 endfunction
 
-" LiteSpace
-augroup LiteSpace
+" Litespace
+augroup Litespace
   autocmd!
-  autocmd BufEnter,BufWinEnter * call <SID>LiteSpaceAddBufnr(expand('<abuf>'))
-  " autocmd BufUnload,BufDelete,BufWipeout * call <SID>LiteSpaceRemoveBufnr(expand('<abuf>'))
-  autocmd BufUnload * call <SID>LiteSpaceRemoveBufnr(expand('<abuf>'))
-  autocmd FileType qf call <SID>LiteSpaceRemoveBufnr(expand('<abuf>'))
+  autocmd BufEnter,BufWinEnter * call <SID>LitespaceAddBufnr(expand('<abuf>'))
+  " autocmd BufUnload,BufDelete,BufWipeout * call <SID>LitespaceRemoveBufnr(expand('<abuf>'))
+  autocmd BufUnload * call <SID>LitespaceRemoveBufnr(expand('<abuf>'))
+  autocmd FileType qf call <SID>LitespaceRemoveBufnr(expand('<abuf>'))
 augroup END
 
 nnoremap <unique> <silent> <Leader>tn     :tabnew<CR>
@@ -572,5 +572,5 @@ nnoremap <unique> <silent> <Leader>wph    :call <SID>ColumnPrimaryWindowVertical
 
 nnoremap <unique> <silent> <Leader>lsa    :call <SID>ListWindowDisplayAllBufferList()<CR>
 nnoremap <unique> <silent> <Leader>lsl    :call <SID>ListWindowDisplayTabBufferList()<CR>
-nnoremap <unique> <silent> <Leader>lss    :call <SID>LiteSpacePromptLoadSpace()<CR>
-nnoremap <unique> <silent> <Leader>lsp    :call <SID>LiteSpacePromptAppendToSpace()<CR>
+nnoremap <unique> <silent> <Leader>lss    :call <SID>LitespacePromptLoadSpace()<CR>
+nnoremap <unique> <silent> <Leader>lsp    :call <SID>LitespacePromptAppendToSpace()<CR>
