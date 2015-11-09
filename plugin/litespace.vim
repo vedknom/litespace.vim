@@ -131,10 +131,12 @@ endfunction
 
 " BufferList
 function! s:BufferListNew()
-  let l:bufferList = {}
-  let l:bufferList.type = 'BufferList'
-  let l:bufferList.bufnrs = {}
-  return l:bufferList
+  let l:self = {
+    \ 'type': 'BufferList',
+    \ 'bufnrs': {},
+    \ 'frozen': 0
+  \ }
+  return l:self
 endfunction
 
 function! s:IsBufferListType(object)
@@ -169,23 +171,45 @@ function! s:BufferListFromAll()
   return l:bufferList
 endfunction
 
+function! s:bufferListFrozen(self)
+  let l:self = a:self
+  return l:self.frozen
+endfunction
+
+function! s:bufferListSetFrozen(self, flag)
+  let l:self = a:self
+  let l:flag = a:flag
+  let l:self.frozen = l:flag
+endfunction
+
+function! s:bufferListToggleFrozen(self)
+  let l:self = a:self
+  call s:bufferListSetFrozen(l:self, !s:bufferListFrozen(l:self))
+endfunction
+
 function! s:bufferListAdd(self, bufnr)
   let l:self = a:self
-  let l:bufnr = a:bufnr
-  let l:self.bufnrs[l:bufnr] = l:bufnr
+  if !s:bufferListFrozen(l:self)
+    let l:bufnr = a:bufnr
+    let l:self.bufnrs[l:bufnr] = l:bufnr
+  endif
 endfunction
 
 function! s:bufferListRemove(self, bufnr)
   let l:self = a:self
-  let l:bufnr = a:bufnr
-  if has_key(l:self.bufnrs, l:bufnr)
-    unlet l:self.bufnrs[l:bufnr]
+  if !s:bufferListFrozen(l:self)
+    let l:bufnr = a:bufnr
+    if has_key(l:self.bufnrs, l:bufnr)
+      unlet l:self.bufnrs[l:bufnr]
+    endif
   endif
 endfunction
 
 function! s:bufferListClear(self)
   let l:self = a:self
-  let l:self.bufnrs = {}
+  if !s:bufferListFrozen(l:self)
+    let l:self.bufnrs = {}
+  endif
 endfunction
 
 function! s:bufferListGetEntries(self, skipbufnr)
@@ -413,15 +437,19 @@ function! s:ListWindowRemoveSelectedBuffer()
   let l:lineCount = line('$')
 
   let l:self = s:ListWindowInstance()
+  let l:frozen = 0
   if l:lineCount > 0
     let l:bufferList = l:self.bufferList
-    let l:rmbufnr = s:EntryGetBufnrFromCurrentLine()
-    call s:bufferListRemove(l:bufferList, l:rmbufnr)
-    setlocal modifiable
-    normal! dd
-    setlocal nomodifiable
+    let l:frozen = s:bufferListFrozen(l:bufferList)
+    if !l:frozen
+      let l:rmbufnr = s:EntryGetBufnrFromCurrentLine()
+      call s:bufferListRemove(l:bufferList, l:rmbufnr)
+      setlocal modifiable
+      normal! dd
+      setlocal nomodifiable
+    endif
   endif
-  if l:lineCount <= 1
+  if l:lineCount <= 1 && !l:frozen
     call s:ListWindowRemove(l:bufnr)
   endif
 endfunction
@@ -431,8 +459,11 @@ function! s:ListWindowRemoveAllBuffers()
 
   let l:self = s:ListWindowInstance()
   let l:bufferList = l:self.bufferList
-  call s:bufferListClear(l:bufferList)
-  call s:ListWindowRemove(l:bufnr)
+  let l:frozen = s:bufferListFrozen(l:bufferList)
+  if !l:frozen
+    call s:bufferListClear(l:bufferList)
+    call s:ListWindowRemove(l:bufnr)
+  endif
 endfunction
 
 function! s:ListWindowRefreshToCurrentTab()
@@ -441,17 +472,26 @@ function! s:ListWindowRefreshToCurrentTab()
 
   let l:self = s:ListWindowInstance()
   let l:bufferList = l:self.bufferList
-  let l:srcwinnr = l:self.srcwinnr
-  call s:ListWindowRemoveAllBuffers()
-  let l:winnr = 1
-  while l:winnr <= windowCount
-    let l:bufnr = winbufnr(l:winnr)
-    if l:bufnr != -1
-      call s:bufferListAdd(l:bufferList, l:bufnr)
-    endif
-    let l:winnr = l:winnr + 1
-  endwhile
-  call s:ListWindowDisplay(l:bufferList, l:srcwinnr)
+  let l:frozen = s:bufferListFrozen(l:bufferList)
+    if !l:frozen
+    let l:srcwinnr = l:self.srcwinnr
+    call s:ListWindowRemoveAllBuffers()
+    let l:winnr = 1
+    while l:winnr <= windowCount
+      let l:bufnr = winbufnr(l:winnr)
+      if l:bufnr != -1
+        call s:bufferListAdd(l:bufferList, l:bufnr)
+      endif
+      let l:winnr = l:winnr + 1
+    endwhile
+    call s:ListWindowDisplay(l:bufferList, l:srcwinnr)
+  endif
+endfunction
+
+function! s:ListWindowToggleFreezeBufferList()
+  let l:self = s:ListWindowInstance()
+  let l:bufferList = l:self.bufferList
+  call s:bufferListToggleFrozen(l:bufferList)
 endfunction
 
 function! s:ListWindowSetupMappings()
@@ -467,6 +507,7 @@ function! s:ListWindowSetupMappings()
   nnoremap <silent> <buffer> d      :call <SID>ListWindowRemoveSelectedBuffer()<CR>
   nnoremap <silent> <buffer> D      :call <SID>ListWindowRemoveAllBuffers()<CR>
   nnoremap <silent> <buffer> r      :call <SID>ListWindowRefreshToCurrentTab()<CR>
+  nnoremap <silent> <buffer> R      :call <SID>ListWindowToggleFreezeBufferList()<CR>
   nnoremap <silent> <buffer> S      :call <SID>ListWindowSaveSpace()<CR>
 endfunction
 
@@ -585,6 +626,8 @@ nnoremap <unique> <silent> <Plug>(litespace_space_load)             :call <SID>L
 nnoremap <unique> <silent> <Plug>(litespace_space_edit)             :call <SID>LitespacePromptEditSpace()<CR>
 nnoremap <unique> <silent> <Plug>(litespace_space_append)           :call <SID>LitespacePromptAppendToSpace()<CR>
 
+nnoremap <unique> <silent> <Plug>(litespace_allbufs_toggle_freeze)  :call <SID>bufferListToggleFrozen(<SID>LitespaceGetAllBufferList())<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tabbufs_toggle_freeze)  :call <SID>bufferListToggleFrozen(<SID>BufferListFromCurrentTab())<CR>
 
 nmap <unique> <silent> <Leader>tn     <Plug>(litespace_tabnew)
 nmap <unique> <silent> <Leader>tN     <Plug>(litespace_tabnewlast)
