@@ -196,7 +196,7 @@ function! s:bufferListGetEntries(self, skipbufnr)
   if !empty(l:bufnrs)
     for l:key in sort(l:bufnrs, function("s:SortInts"))
       let l:bufnr = str2nr(l:key)
-      if l:bufnr != l:skipbufnr 
+      if l:bufnr != l:skipbufnr
         if !bufexists(l:bufnr) || !buflisted(l:bufnr)
           " echom 'Stale buffer was not removed from list ' . l:bufnr
           " unlet l:self[l:key]
@@ -304,7 +304,7 @@ endfunction
 function! s:spaceAddPath(self, path)
   let l:self = a:self
   let l:path = a:path
-  let l:paths = l:self.paths 
+  let l:paths = l:self.paths
   let l:self.paths = sort(add(l:paths, l:path))
 endfunction
 
@@ -520,7 +520,7 @@ function! s:LitespacePromptSpaceName(action)
   let &wildmenu = 1
   execute 'setlocal path=' . l:directory
   let l:spacename = input(l:action . ' space named: ', '', 'file_in_path')
-  execute 'setlocal path=' . l:oldpath 
+  execute 'setlocal path=' . l:oldpath
   let &wildmenu = l:oldwildmenu
   return l:spacename
 endfunction
@@ -531,6 +531,15 @@ function! s:LitespacePromptLoadSpace()
   if !empty(l:spacename)
     let l:space = s:SpaceLoadFrom(l:spacename, 1)
     call s:spaceLoadBuffers(l:space)
+  endif
+endfunction
+
+function! s:LitespacePromptEditSpace()
+  let l:oldbufnr = bufnr('%')
+  let l:spacename = s:LitespacePromptSpaceName('Load')
+  if !empty(l:spacename)
+    let l:filepath = s:SpaceFilePathFor(l:spacename)
+    execute 'edit ' . l:filepath
   endif
 endfunction
 
@@ -556,21 +565,46 @@ augroup Litespace
   autocmd FileType qf call <SID>LitespaceRemoveBufnr(expand('<abuf>'))
 augroup END
 
-nnoremap <unique> <silent> <Leader>tn     :tabnew<CR>
-nnoremap <unique> <silent> <Leader>wt     :tab split<CR>
-nnoremap <unique> <silent> <Leader>ws     :tab split<CR>:rightbelow new<CR>:wincmd w<CR>
-nnoremap <unique> <silent> <Leader>wv     :tab split<CR>:rightbelow vnew<CR>:wincmd w<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tabnew)                 :tabnew<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tabnewlast)             :tablast<CR>:tabnew<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tabsplit)               :tab split<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tabsplit_horiz)         :tab split<CR>:rightbelow new<CR>:wincmd w<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tabsplit_vert)          :tab split<CR>:rightbelow vnew<CR>:wincmd w<CR>
+nnoremap <unique> <silent> <Plug>(litespace_window_moveto1)         :call <SID>MoveToWindow(1)<CR>
+nnoremap <unique> <silent> <Plug>(litespace_window_moveto2)         :call <SID>MoveToWindow(2)<CR>
+nnoremap <unique> <silent> <Plug>(litespace_window_moveto3)         :call <SID>MoveToWindow(3)<CR>
+nnoremap <unique> <silent> <Plug>(litespace_window_moveto4)         :call <SID>MoveToWindow(4)<CR>
 
-nnoremap <unique> <silent> <Leader>wm1    :call <SID>MoveToWindow(1)<CR>
-nnoremap <unique> <silent> <Leader>wm2    :call <SID>MoveToWindow(2)<CR>
-nnoremap <unique> <silent> <Leader>wm3    :call <SID>MoveToWindow(3)<CR>
-nnoremap <unique> <silent> <Leader>wm4    :call <SID>MoveToWindow(4)<CR>
+nnoremap <unique> <silent> <Plug>(litespace_window_columnonly)      :call <SID>ColumnOnlyWindow()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_window_primary_horiz)   :call <SID>ColumnPrimaryWindowHorizontal()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_window_primary_vert)    :call <SID>ColumnPrimaryWindowVertical()<CR>
 
-nnoremap <unique> <silent> <Leader>wo     :call <SID>ColumnOnlyWindow()<CR>
-nnoremap <unique> <silent> <Leader>wpk    :call <SID>ColumnPrimaryWindowHorizontal()<CR>
-nnoremap <unique> <silent> <Leader>wph    :call <SID>ColumnPrimaryWindowVertical()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_allbuffers)             :call <SID>ListWindowDisplayAllBufferList()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tabbuffers)             :call <SID>ListWindowDisplayTabBufferList()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_space_load)             :call <SID>LitespacePromptLoadSpace()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_space_edit)             :call <SID>LitespacePromptEditSpace()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_space_append)           :call <SID>LitespacePromptAppendToSpace()<CR>
 
-nnoremap <unique> <silent> <Leader>lsa    :call <SID>ListWindowDisplayAllBufferList()<CR>
-nnoremap <unique> <silent> <Leader>lsl    :call <SID>ListWindowDisplayTabBufferList()<CR>
-nnoremap <unique> <silent> <Leader>lss    :call <SID>LitespacePromptLoadSpace()<CR>
-nnoremap <unique> <silent> <Leader>lsp    :call <SID>LitespacePromptAppendToSpace()<CR>
+
+nmap <unique> <silent> <Leader>tn     <Plug>(litespace_tabnew)
+nmap <unique> <silent> <Leader>tN     <Plug>(litespace_tabnewlast)
+nmap <unique> <silent> <Leader>wt     <Plug>(litespace_tabsplit)
+nmap <unique> <silent> <Leader>ws     <Plug>(litespace_tabsplit_horiz)
+nmap <unique> <silent> <Leader>wv     <Plug>(litespace_tabsplit_vert)
+
+nmap <unique> <silent> <Leader>wm1    <Plug>(litespace_window_moveto1)
+nmap <unique> <silent> <Leader>wm2    <Plug>(litespace_window_moveto2)
+nmap <unique> <silent> <Leader>wm3    <Plug>(litespace_window_moveto3)
+nmap <unique> <silent> <Leader>wm4    <Plug>(litespace_window_moveto4)
+
+nmap <unique> <silent> <Leader>wo     <Plug>(litespace_window_columnonly)
+nmap <unique> <silent> <Leader>wpk    <Plug>(litespace_window_primary_horiz)
+nmap <unique> <silent> <Leader>wph    <Plug>(litespace_window_primary_vert)
+
+if !exists('g:litespace_no_map_default') || !g:litespace_no_map_default
+  nmap <unique> <silent> <Leader>lsa    <Plug>(litespace_allbuffers)
+  nmap <unique> <silent> <Leader>lsl    <Plug>(litespace_tabbuffers)
+  nmap <unique> <silent> <Leader>lss    <Plug>(litespace_space_load)
+  nmap <unique> <silent> <Leader>lsp    <Plug>(litespace_space_append)
+  nmap <unique> <silent> <Leader>lse    <Plug>(litespace_space_edit)
+endif
