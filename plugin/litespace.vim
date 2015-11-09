@@ -11,6 +11,8 @@ let g:loaded_litespace = 1
 
 " let g:litespace_buffer_list_height = 10
 " let g:litespace_show_unnamed = 0
+" let g:litespace_no_map_default = 0
+" let g:litespace_list_style = 0; 1 to hide path
 
 " Window manipulation
 function! s:MoveToWindow(windowNR)
@@ -258,7 +260,8 @@ function! s:bufferListGetLines(self, skipbufnr)
   let l:nameWidth = (((l:maxNameLength + 3) / 4) + 1) * 4
   let l:stringFormat = '%-' . l:nameWidth . 's"%s" %d'
   for l:entry in l:entries
-    let l:line = printf(l:stringFormat, l:entry.name, l:entry.path, l:entry.bufnr)
+    let l:path = s:LitespaceDisplayListStyle() == 0 ? l:entry.path : ''
+    let l:line = printf(l:stringFormat, l:entry.name, l:path, l:entry.bufnr)
     call add(l:lines, l:line)
   endfor
 
@@ -488,6 +491,15 @@ function! s:ListWindowRefreshToCurrentTab()
   endif
 endfunction
 
+function! s:ListWindowCycleListStyle()
+  let l:self = s:ListWindowInstance()
+
+  call s:LitespaceCycleListStyle()
+  let l:bufferList = l:self.bufferList
+  let l:srcwinnr = l:self.srcwinnr
+  call s:ListWindowDisplay(l:bufferList, l:srcwinnr)
+endfunction
+
 function! s:ListWindowToggleFreezeBufferList()
   let l:self = s:ListWindowInstance()
   let l:bufferList = l:self.bufferList
@@ -508,6 +520,7 @@ function! s:ListWindowSetupMappings()
   nnoremap <silent> <buffer> D      :call <SID>ListWindowRemoveAllBuffers()<CR>
   nnoremap <silent> <buffer> r      :call <SID>ListWindowRefreshToCurrentTab()<CR>
   nnoremap <silent> <buffer> R      :call <SID>ListWindowToggleFreezeBufferList()<CR>
+  nnoremap <silent> <buffer> C      :call <SID>ListWindowCycleListStyle()<CR>
   nnoremap <silent> <buffer> S      :call <SID>ListWindowSaveSpace()<CR>
 endfunction
 
@@ -529,6 +542,18 @@ function! s:ListWindowSaveSpace()
 endfunction
 
 " Litespace
+function! s:LitespaceDisplayListStyle()
+  if !exists('g:litespace_list_style')
+    return 0
+  endif
+  return g:litespace_list_style
+endfunction
+
+function! s:LitespaceCycleListStyle()
+  let l:listStyleCount = 2
+  let g:litespace_list_style = (s:LitespaceDisplayListStyle() + 1) % l:listStyleCount
+endfunction
+
 function! s:LitespaceGetAllBufferList()
   let l:key = 'all'
   if !has_key(s:state, l:key)
