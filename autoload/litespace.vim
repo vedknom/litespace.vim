@@ -87,6 +87,13 @@ function! s:BufferListFromAll()
   return l:bufferList
 endfunction
 
+function! s:bufferListGetTabName(self, defaultTabnr)
+  let l:self = a:self
+  let l:defaultTabnr = a:defaultTabnr
+  let l:tabname = !empty(l:self.tabname) ? l:self.tabname : l:defaultTabnr
+  return l:tabname
+endfunction
+
 function! s:bufferListFrozen(self)
   let l:self = a:self
   return l:self.frozen
@@ -277,16 +284,34 @@ function! s:spaceMerge(self, other)
   call s:spaceSetPaths(l:self, l:self.paths + l:other.paths)
 endfunction
 
-" ListWindow
-function! s:ListWindowMaxHeight()
+" BaseListWindow
+function! s:BaseListWindowMaxHeight()
   return exists('g:litespace_buffer_list_height') ? g:litespace_buffer_list_height : 10
 endfunction
 
-function! s:ListWindowNew()
-  " .bufferList
+function! s:BaseListWindowNew()
   let l:self = {
     \ 'srcwinnr': -1
   \ }
+  return l:self
+endfunction
+
+function! s:baseListWindowRemove(self, bufnr)
+  let l:self = a:self
+  let l:bufnr = a:bufnr
+
+  silent execute 'silent! bunload ' . a:bufnr
+  silent execute 'silent! bdelete ' . a:bufnr
+  if l:self.srcwinnr != -1
+    execute l:self.srcwinnr . 'wincmd w'
+    let l:self.srcwinnr = -1
+  endif
+endfunction
+
+" ListWindow
+function! s:ListWindowNew()
+  " .bufferList
+  let l:self = s:BaseListWindowNew()
   return l:self
 endfunction
 
@@ -317,7 +342,7 @@ function! s:ListWindowDisplay(bufferList, srcwinnr)
     botright new
     let l:self.srcwinnr = l:srcwinnr
     let l:self.bufferList = l:bufferList
-    let l:winheigt = min([s:ListWindowMaxHeight(), len(l:lines)])
+    let l:winheigt = min([s:BaseListWindowMaxHeight(), len(l:lines)])
     execute l:winheigt . 'wincmd _'
 
     setlocal modifiable
@@ -329,6 +354,7 @@ function! s:ListWindowDisplay(bufferList, srcwinnr)
     call s:ListWindowSetupMappings()
 
     setlocal buftype=nofile
+    setlocal bufhidden=delete
     setlocal nomodifiable
   endif
 endfunction
@@ -336,13 +362,7 @@ endfunction
 function! s:ListWindowRemove(bufnr)
   let l:self = s:ListWindowInstance()
   let l:bufnr = a:bufnr
-
-  silent execute 'silent! bunload ' . a:bufnr
-  silent execute 'silent! bdelete ' . a:bufnr
-  if l:self.srcwinnr != -1
-    execute l:self.srcwinnr . 'wincmd w'
-    let l:self.srcwinnr = -1
-  endif
+  call s:baseListWindowRemove(l:self, l:bufnr)
 endfunction
 
 function! s:ListWindowOpenSelectedBuffer(splitStyle)
@@ -466,6 +486,104 @@ function! s:ListWindowSaveSpace()
   endif
 endfunction
 
+" TabListWindow
+function! s:TabListWindowNew()
+  let l:self = s:BaseListWindowNew()
+  return l:self
+endfunction
+
+function! s:TabListWindowInstance()
+  let l:key = 'tabWindow'
+  if !has_key(s:state, l:key)
+    let s:state[l:key] = s:TabListWindowNew()
+  endif
+  return s:state[l:key]
+endfunction
+
+function! s:TabListWindowRemove(bufnr)
+  let l:self = s:TabListWindowInstance()
+  let l:bufnr = a:bufnr
+  call s:baseListWindowRemove(l:self, l:bufnr)
+endfunction
+
+function! s:TabListWindowGoTo()
+  let l:self = s:TabListWindowInstance()
+  let l:line = getline('.')
+  let l:splits = split(l:line, '#')
+  if !empty(l:splits)
+    let l:tabnr = str2nr(l:splits[-1])
+    execute 'tabnext ' . l:tabnr
+  endif
+endfunction
+
+function! s:TabListWindowDisplay(srcwinnr)
+  let l:self = s:TabListWindowInstance()
+  let l:shown = l:self.srcwinnr != -1
+  let l:srcwinnr = l:shown ? l:self.srcwinnr : a:srcwinnr
+  if l:shown
+    return s:TabListWindowDisplay(l:srcwinnr)
+  endif
+
+  let l:lines = s:tabListWindowGetLines(l:self)
+  if empty(l:lines)
+    echom 'Tab list is empty'
+    let l:self.srcwinnr = -1
+  else
+    botright new
+    let l:self.srcwinnr = l:srcwinnr
+    let l:winheigt = min([s:BaseListWindowMaxHeight(), len(l:lines)])
+    execute l:winheigt . 'wincmd _'
+
+    setlocal modifiable
+    normal ggdG
+    call append(0, l:lines)
+    normal ddgg
+
+    call s:TabListWindowSetupMappings()
+
+    setlocal buftype=nofile
+    setlocal bufhidden=delete
+    setlocal nomodifiable
+  endif
+endfunction
+
+function! s:TabListWindowSetupMappings()
+  autocmd BufLeave      <buffer>    call  <SID>TabListWindowRemove(expand('<abuf>'))
+  autocmd BufWinLeave   <buffer>    call  <SID>TabListWindowRemove(expand('<abuf>'))
+  nnoremap <silent> <buffer> <C-c>  :call <SID>TabListWindowRemove(bufnr('%'))<CR>
+  nnoremap <silent> <buffer> <C-[>  :call <SID>TabListWindowRemove(bufnr('%'))<CR>
+  nnoremap <silent> <buffer> q      :call <SID>TabListWindowRemove(bufnr('%'))<CR>
+  nnoremap <silent> <buffer> <CR>   :call <SID>TabListWindowGoTo()<CR>
+endfunction
+
+function! s:tabListWindowGetLines(self)
+  let l:self = a:self
+  let l:entries = []
+  let l:curtabnr = tabpagenr()
+  let l:maxNameLength = 0
+  for l:i in range(tabpagenr('$'))
+    let l:tabnr = l:i + 1
+    if l:tabnr != l:curtabnr
+      let l:bufferList = s:BufferListFromTab(l:tabnr)
+      let l:tabname = s:bufferListGetTabName(l:bufferList, l:tabnr)
+      let l:entry = [l:tabnr, l:tabname]
+      call add(l:entries, l:entry)
+      if len(l:entry[1]) > l:maxNameLength
+        let l:maxNameLength = len(l:entry[1])
+      endif
+    endif
+  endfor
+
+  let l:lines = []
+  let l:nameWidth = (((l:maxNameLength + 3) / 4) + 1) * 4
+  let l:stringFormat = '%-' . l:nameWidth . 's#%d'
+  for l:entry in l:entries
+    let l:line = printf(l:stringFormat, l:entry[1], l:entry[0])
+    call add(l:lines, l:line)
+  endfor
+  return l:lines
+endfunction
+
 " Litespace
 function! s:LitespaceDisplayListStyle()
   if !exists('g:litespace_list_style')
@@ -547,7 +665,7 @@ function! LitespaceTabLabel(tabnr)
   endif
 
   let l:bufferList = s:BufferListFromTab(l:tabnr)
-  let l:tabname = !empty(l:bufferList.tabname) ? l:bufferList.tabname : l:tabnr
+  let l:tabname = s:bufferListGetTabName(l:bufferList, l:tabnr)
   let l:label = printf('%s(%s)', l:tabname, l:tabbufname)
 
   return l:label
@@ -636,12 +754,20 @@ function! litespace#removeBufnr(bufnr)
   call s:LitespaceRemoveBufnr(a:bufnr)
 endfunction
 
+function! litespace#tabline()
+  return s:LitespaceTabLine()
+endfunction
+
 function! litespace#displayAllBufferList()
   call s:ListWindowDisplayAllBufferList()
 endfunction
 
-function! litespace#displayTabeBufferList()
+function! litespace#displayTabBufferList()
   call s:ListWindowDisplayTabBufferList()
+endfunction
+
+function! litespace#displayTabList()
+  call s:TabListWindowDisplay(winnr())
 endfunction
 
 function! litespace#promptLoadSpaces()

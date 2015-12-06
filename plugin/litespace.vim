@@ -43,6 +43,7 @@ nnoremap <unique> <silent> <Plug>(litespace_window_primary_vert)    :call litesp
 
 nnoremap <unique> <silent> <Plug>(litespace_allbuffers)             :call litespace#displayAllBufferList()<CR>
 nnoremap <unique> <silent> <Plug>(litespace_tabbuffers)             :call litespace#displayTabeBufferList()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tablist)                :call litespace#displayTabList()<CR>
 nnoremap <unique> <silent> <Plug>(litespace_spaces_load)            :call litespace#promptLoadSpaces()<CR>
 nnoremap <unique> <silent> <Plug>(litespace_space_load)             :call litespace#promptLoadSpace()<CR>
 nnoremap <unique> <silent> <Plug>(litespace_space_loadtab)          :call litespace#promptLoadTabSpace()<CR>
@@ -74,6 +75,7 @@ if !exists('g:litespace_no_map_default') || !g:litespace_no_map_default
   nmap <unique> <silent> <Leader>lst    <Plug>(litespace_tablist)
   nmap <unique> <silent> <Leader>ls1    <Plug>(litespace_spaces_load)
   nmap <unique> <silent> <Leader>lso    <Plug>(litespace_space_load)
+  nmap <unique> <silent> <Leader>lsO    <Plug>(litespace_space_loadtab)
   nmap <unique> <silent> <Leader>lsp    <Plug>(litespace_space_append)
   nmap <unique> <silent> <Leader>lse    <Plug>(litespace_space_edit)
 endif
