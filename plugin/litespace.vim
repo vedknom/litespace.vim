@@ -14,6 +14,10 @@ let g:loaded_litespace = 1
 " let g:litespace_no_map_default = 0
 " let g:litespace_list_style = 0; 1 to hide path
 
+function! LitespaceTabLine()
+  return litespace#tabline()
+endfunction
+
 " Litespace
 augroup Litespace
   autocmd!
@@ -41,6 +45,7 @@ nnoremap <unique> <silent> <Plug>(litespace_allbuffers)             :call litesp
 nnoremap <unique> <silent> <Plug>(litespace_tabbuffers)             :call litespace#displayTabeBufferList()<CR>
 nnoremap <unique> <silent> <Plug>(litespace_spaces_load)            :call litespace#promptLoadSpaces()<CR>
 nnoremap <unique> <silent> <Plug>(litespace_space_load)             :call litespace#promptLoadSpace()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_space_loadtab)          :call litespace#promptLoadTabSpace()<CR>
 
 nnoremap <unique> <silent> <Plug>(litespace_space_edit)             :call litespace#promptEditSpace()<CR>
 nnoremap <unique> <silent> <Plug>(litespace_space_append)           :call litespace#promptAppendToSpace()<CR>
@@ -65,9 +70,10 @@ nmap <unique> <silent> <Leader>wph    <Plug>(litespace_window_primary_vert)
 
 if !exists('g:litespace_no_map_default') || !g:litespace_no_map_default
   nmap <unique> <silent> <Leader>lsa    <Plug>(litespace_allbuffers)
-  nmap <unique> <silent> <Leader>lsl    <Plug>(litespace_tabbuffers)
-  nmap <unique> <silent> <Leader>lss    <Plug>(litespace_spaces_load)
-  nmap <unique> <silent> <Leader>ls1    <Plug>(litespace_space_load)
+  nmap <unique> <silent> <Leader>lss    <Plug>(litespace_tabbuffers)
+  nmap <unique> <silent> <Leader>lst    <Plug>(litespace_tablist)
+  nmap <unique> <silent> <Leader>ls1    <Plug>(litespace_spaces_load)
+  nmap <unique> <silent> <Leader>lso    <Plug>(litespace_space_load)
   nmap <unique> <silent> <Leader>lsp    <Plug>(litespace_space_append)
   nmap <unique> <silent> <Leader>lse    <Plug>(litespace_space_edit)
 endif

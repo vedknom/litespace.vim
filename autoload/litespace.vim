@@ -44,7 +44,8 @@ function! s:BufferListNew()
   let l:self = {
     \ 'type': 'BufferList',
     \ 'bufnrs': {},
-    \ 'frozen': 0
+    \ 'frozen': 0,
+    \ 'tabname': ''
   \ }
   return l:self
 endfunction
@@ -56,6 +57,11 @@ endfunction
 
 function! s:BufferListFromCurrentTab()
   let l:tabnr = tabpagenr()
+  return s:BufferListFromTab(l:tabnr)
+endfunction
+
+function! s:BufferListFromTab(tabnr)
+  let l:tabnr = a:tabnr
   let l:bufferListVar = gettabvar(l:tabnr, s:tab_buffer_set_key)
   if !s:IsBufferListType(l:bufferListVar)
     let l:bufferList = s:BufferListNew()
@@ -510,13 +516,71 @@ function! s:LitespacePromptSpaceName(action)
   return l:spacename
 endfunction
 
+function! s:LitespaceSetFirstTabName(tabname)
+  let l:tabname = a:tabname
+  let l:bufferList = s:BufferListFromCurrentTab()
+  if empty(l:bufferList.tabname)
+    let l:bufferList.tabname = l:tabname
+  endif
+endfunction
+
 function! s:LitespacePromptLoadSpace()
   let l:oldbufnr = bufnr('%')
   let l:spacename = s:LitespacePromptSpaceName('Load')
   if !empty(l:spacename)
     let l:space = s:SpaceLoadFrom(l:spacename, 1)
     call s:spaceLoadBuffers(l:space)
+    call s:LitespaceSetFirstTabName(l:spacename)
   endif
+endfunction
+
+function! LitespaceTabLabel(tabnr)
+  let l:tabnr = a:tabnr
+
+  let l:bufnrlist = tabpagebuflist(l:tabnr)
+  let l:tabpagewinnr = tabpagewinnr(l:tabnr)
+  let l:origtabbufname = bufname(l:bufnrlist[l:tabpagewinnr - 1])
+  if l:origtabbufname == ''
+    let l:tabbufname = '[No Name]'
+  else
+    let l:tabbufname = fnamemodify(l:origtabbufname, ":t")
+  endif
+
+  let l:bufferList = s:BufferListFromTab(l:tabnr)
+  let l:tabname = !empty(l:bufferList.tabname) ? l:bufferList.tabname : l:tabnr
+  let l:label = printf('%s(%s)', l:tabname, l:tabbufname)
+
+  return l:label
+endfunction
+
+function! s:LitespaceTabLine()
+  let l:tabline = ''
+  for i in range(tabpagenr('$'))
+    " select the highlighting
+    if i + 1 == tabpagenr()
+      let l:tabline .= '%#TabLineSel#'
+    else
+      let l:tabline .= '%#TabLine#'
+    endif
+
+    let l:tabline .= '%' . (i + 1) . 'T'
+    let l:tabline .= ' %{LitespaceTabLabel(' . (i + 1) . ')} '
+  endfor
+
+  " after the last tab fill with TabLineFill and reset tab page nr
+  let l:tabline .= '%#TabLineFill#%T'
+
+  " right-align the label to close the current tab page
+  if tabpagenr('$') > 1
+    let l:tabline .= '%=%#TabLine#%999XX'
+  endif
+
+  return l:tabline
+endfunction
+
+function! s:LitespacePromptLoadTabSpace()
+  tabnew
+  call s:LitespacePromptLoadSpace()
 endfunction
 
 function! s:LitespacePromptLoadSpaces()
@@ -586,6 +650,10 @@ endfunction
 
 function! litespace#promptLoadSpace()
   call s:LitespacePromptLoadSpace()
+endfunction
+
+function! litespace#promptLoadTabSpace()
+  call s:LitespacePromptLoadTabSpace()
 endfunction
 
 function! litespace#promptEditSpace()
