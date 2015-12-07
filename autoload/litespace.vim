@@ -13,6 +13,18 @@ let s:state = {
 let s:tab_buffer_set_key = 'litespace_buffer_set'
 
 " Utility
+function! s:Funcname(name)
+  let l:sid = matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_Fn$')
+  let l:funcname = printf('<SNR>%d_%s', l:sid, a:name)
+  return l:funcname
+endfunction
+
+function! s:Fn(name)
+  let l:name = a:name
+  let l:funcname = s:Funcname(l:name)
+  return function(l:funcname)
+endfunction
+
 function! s:SortInts(lhs, rhs)
   return a:lhs - a:rhs
 endfunction
@@ -89,7 +101,7 @@ endfunction
 
 function! s:bufferListGetTabName(self, defaultTabnr)
   let l:self = a:self
-  let l:defaultTabnr = a:defaultTabnr
+  let l:defaultTabnr = string(a:defaultTabnr)
   let l:tabname = !empty(l:self.tabname) ? l:self.tabname : l:defaultTabnr
   return l:tabname
 endfunction
@@ -487,6 +499,44 @@ function! s:ListWindowSaveSpace()
 endfunction
 
 " TabListWindow
+function! s:TabListEntries()
+  let l:entries = []
+  let l:curtabnr = tabpagenr()
+  for l:i in range(tabpagenr('$'))
+    let l:tabnr = l:i + 1
+    if l:tabnr != l:curtabnr
+      let l:bufferList = s:BufferListFromTab(l:tabnr)
+      let l:tabname = s:bufferListGetTabName(l:bufferList, l:tabnr)
+      let l:entry = [l:tabnr, l:tabname]
+      call add(l:entries, l:entry)
+    endif
+  endfor
+  return l:entries
+endfunction
+
+function! LitespaceTabListNameCompletion(arglead, cmdline, cursorpos)
+  let l:entries = s:TabListEntries()
+  let l:candidates = map(l:entries, 'v:val[1]')
+  let l:result = join(l:candidates, "\n")
+  return l:result
+endfunction
+
+function! s:TabListPromptGoto()
+  let l:oldwildmenu = &wildmenu
+  let &wildmenu = 1
+  call inputsave()
+  let l:tabname = input('Goto tab: ', '', 'custom,LitespaceTabListNameCompletion')
+  call inputrestore()
+  let &wildmenu = l:oldwildmenu
+  let l:entries = s:TabListEntries()
+  let l:name2tabnr = {}
+  for l:entry in l:entries
+    let l:name2tabnr[l:entry[1]] = l:entry[0]
+  endfor
+  let l:tabnr = l:name2tabnr[l:tabname]
+  execute 'tabnext ' . l:tabnr
+endfunction
+
 function! s:TabListWindowNew()
   let l:self = s:BaseListWindowNew()
   return l:self
@@ -767,7 +817,17 @@ function! litespace#displayTabBufferList()
 endfunction
 
 function! litespace#displayTabList()
-  call s:TabListWindowDisplay(winnr())
+  " call s:TabListWindowDisplay(winnr())
+  call s:TabListPromptGoto()
+endfunction
+
+function! litespace#tabRename()
+  let l:bufferList = s:BufferListFromCurrentTab()
+  call inputsave()
+  let l:tabname = input('Rename tab: ', '')
+  call inputrestore()
+  let l:bufferList.tabname = l:tabname
+  redraw!
 endfunction
 
 function! litespace#promptLoadSpaces()
