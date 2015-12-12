@@ -528,13 +528,15 @@ function! s:TabListPromptGoto()
   let l:tabname = input('Goto tab: ', '', 'custom,LitespaceTabListNameCompletion')
   call inputrestore()
   let &wildmenu = l:oldwildmenu
-  let l:entries = s:TabListEntries()
-  let l:name2tabnr = {}
-  for l:entry in l:entries
-    let l:name2tabnr[l:entry[1]] = l:entry[0]
-  endfor
-  let l:tabnr = l:name2tabnr[l:tabname]
-  execute 'tabnext ' . l:tabnr
+  if !empty(l:tabname)
+    let l:entries = s:TabListEntries()
+    let l:name2tabnr = {}
+    for l:entry in l:entries
+      let l:name2tabnr[l:entry[1]] = l:entry[0]
+    endfor
+    let l:tabnr = l:name2tabnr[l:tabname]
+    execute 'tabnext ' . l:tabnr
+  endif
 endfunction
 
 function! s:TabListWindowNew()
@@ -817,7 +819,10 @@ function! litespace#displayTabBufferList()
 endfunction
 
 function! litespace#displayTabList()
-  " call s:TabListWindowDisplay(winnr())
+  call s:TabListWindowDisplay(winnr())
+endfunction
+
+function! litespace#promptGotoTab()
   call s:TabListPromptGoto()
 endfunction
 
