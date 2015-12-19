@@ -29,6 +29,8 @@ augroup END
 
 nnoremap <unique> <silent> <Plug>(litespace_tabnew)                 :tabnew<CR>
 nnoremap <unique> <silent> <Plug>(litespace_tabnewlast)             :tablast<CR>:tabnew<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tmptabnew)              :call litespace#util#tab#tempTabNew()<CR>
+nnoremap <unique> <silent> <Plug>(litespace_tmptabnewlast)          :tablast<CR>:call litespace#util#tab#tempTabNew()<CR>
 nnoremap <unique> <silent> <Plug>(litespace_tabsplit)               :tab split<CR>
 nnoremap <unique> <silent> <Plug>(litespace_tabsplit_horiz)         :tab split<CR>:rightbelow new<CR>:wincmd w<CR>
 nnoremap <unique> <silent> <Plug>(litespace_tabsplit_vert)          :tab split<CR>:rightbelow vnew<CR>:wincmd w<CR>
@@ -59,6 +61,8 @@ nnoremap <unique> <silent> <Plug>(litespace_tabbufs_toggle_freeze)  :call litesp
 
 nmap <unique> <silent> <Leader>tn     <Plug>(litespace_tabnew)
 nmap <unique> <silent> <Leader>tN     <Plug>(litespace_tabnewlast)
+nmap <unique> <silent> <Leader>ttn    <Plug>(litespace_tmptabnew)
+nmap <unique> <silent> <Leader>ttN    <Plug>(litespace_tmptabnewlast)
 nmap <unique> <silent> <Leader>wt     <Plug>(litespace_tabsplit)
 nmap <unique> <silent> <Leader>ws     <Plug>(litespace_tabsplit_horiz)
 nmap <unique> <silent> <Leader>wv     <Plug>(litespace_tabsplit_vert)
