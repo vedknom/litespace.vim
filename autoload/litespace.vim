@@ -39,6 +39,14 @@ function! s:EntryNew(name, path, bufnr)
   return l:self
 endfunction
 
+function! s:EntryWithPath(path, bufnr)
+  let l:path = a:path
+  let l:bufnr = a:bufnr
+  let l:briefName = fnamemodify(l:path, ':t')
+  let l:entry = s:EntryNew(l:briefName, l:path, l:bufnr)
+  return l:entry
+endfunction
+
 function! s:EntryFromCurrentLine()
   let l:line = getline(line('.'))
   let l:parts = split(l:line, '\s*"\s*')
@@ -48,23 +56,40 @@ endfunction
 
 function! s:EntryGetBufnrFromCurrentLine()
   let l:entry = s:EntryFromCurrentLine()
-  return l:entry.bufnr
+  let l:bufnr = l:entry.bufnr
+  if l:bufnr < 0
+    let l:bufnr = bufnr(l:entry.path, 1)
+  endif
+  return l:bufnr
 endfunction
 
 " BufferList
+function! s:IsBufferListType(object)
+  let l:object = a:object
+  return type(l:object) == type({}) && get(l:object, 'type') == 'BufferList'
+endfunction
+
+function! s:StringCompare(lhs, rhs)
+  return a:lhs == a:rhs ? 0 : a:lhs > a:rhs ? 1 : -1
+endfunction
+
+function! s:BufferListSortEntry(lhs, rhs)
+  return s:StringCompare(a:lhs.path, a:rhs.path)
+endfunction
+
+function! s:BufferListUniqEntry(lhs, rhs)
+  return s:StringCompare(a:lhs.path, a:rhs.path)
+endfunction
+
 function! s:BufferListNew()
   let l:self = {
     \ 'type': 'BufferList',
     \ 'bufnrs': {},
+    \ 'names': {},
     \ 'frozen': 0,
     \ 'tabname': ''
   \ }
   return l:self
-endfunction
-
-function! s:IsBufferListType(object)
-  let l:object = a:object
-  return type(l:object) == type({}) && get(l:object, 'type') == 'BufferList'
 endfunction
 
 function! s:BufferListFromCurrentTab()
@@ -130,12 +155,22 @@ function! s:bufferListAdd(self, bufnr)
   endif
 endfunction
 
+function! s:bufferListAddName(self, name)
+  let l:self = a:self
+  let l:name = a:name
+  let l:self.names[l:name] = l:name
+endfunction
+
 function! s:bufferListRemove(self, bufnr)
   let l:self = a:self
   if !s:bufferListFrozen(l:self)
     let l:bufnr = a:bufnr
     if has_key(l:self.bufnrs, l:bufnr)
+      let l:name = bufname(l:bufnr)
       unlet l:self.bufnrs[l:bufnr]
+      if has_key(l:self.names, l:name)
+        unlet l:self.names[l:name]
+      endif
     endif
   endif
 endfunction
@@ -144,16 +179,17 @@ function! s:bufferListClear(self)
   let l:self = a:self
   if !s:bufferListFrozen(l:self)
     let l:self.bufnrs = {}
+    let l:self.names = {}
   endif
 endfunction
 
-function! s:bufferListGetEntries(self, skipbufnr)
+function! s:bufferListGetBufnrEntries(self, skipbufnr)
   let l:self = a:self
   let l:skipbufnr = a:skipbufnr
   let l:entries = []
   let l:bufnrs = keys(l:self.bufnrs)
   if !empty(l:bufnrs)
-    for l:key in sort(l:bufnrs, function("s:SortInts"))
+    for l:key in l:bufnrs
       let l:bufnr = str2nr(l:key)
       if l:bufnr != l:skipbufnr
         if !bufexists(l:bufnr) || !buflisted(l:bufnr)
@@ -162,19 +198,48 @@ function! s:bufferListGetEntries(self, skipbufnr)
         else
           let l:bufferRawName = bufname(l:bufnr)
           let l:bufferName = bufferRawName
-          if empty(bufferRawName) && exists('g:litespace_show_unnamed') && g:litespace_show_unnamed
+          let l:showUnnamed = exists('g:litespace_show_unnamed')
+            \ && g:litespace_show_unnamed
+          if empty(bufferRawName) && l:showUnnamed
             let l:bufferName = '[No Name]'
           endif
 
           if !empty(l:bufferName)
-            let l:briefName = fnamemodify(l:bufferName, ':t')
-            let l:entry = s:EntryNew(l:briefName, l:bufferName, l:key)
+            let l:entry = s:EntryWithPath(l:bufferName, l:key)
             call add(l:entries, l:entry)
           endif
         endif
       endif
     endfor
   endif
+  return l:entries
+endfunction
+
+function! s:bufferListGetNamedEntries(self, skipbufnr)
+  let l:self = a:self
+  let l:skipbufnr = a:skipbufnr
+  let l:entries = []
+  if !empty(l:self.names)
+    for l:name in keys(l:self.names)
+      let l:bufnr = bufnr(l:name)
+      if l:bufnr == l:skipbufnr
+        let l:bufnr = -1
+      endif
+      let l:entry = s:EntryWithPath(l:name, l:bufnr)
+      call add(l:entries, l:entry)
+    endfor
+  endif
+  return l:entries
+endfunction
+
+function! s:bufferListGetEntries(self, skipbufnr)
+  let l:self = a:self
+  let l:skipbufnr = a:skipbufnr
+  let l:bufnrEntries = s:bufferListGetBufnrEntries(l:self, l:skipbufnr)
+  let l:namedEntries = s:bufferListGetNamedEntries(l:self, l:skipbufnr)
+  let l:entries = l:bufnrEntries + l:namedEntries
+  call sort(l:entries, 's:BufferListSortEntry')
+  call uniq(l:entries, 's:BufferListUniqEntry')
   return l:entries
 endfunction
 
@@ -193,7 +258,7 @@ function! s:bufferListGetLines(self, skipbufnr)
   let l:nameWidth = (((l:maxNameLength + 3) / 4) + 1) * 4
   let l:stringFormat = '%-' . l:nameWidth . 's"%s" %d'
   for l:entry in l:entries
-    let l:path = s:LitespaceDisplayListStyle() == 0 ? l:entry.path : ''
+    let l:path = s:LitespaceDisplayListStyle() == 0 || l:entry.bufnr == -1 ? l:entry.path : ''
     let l:line = printf(l:stringFormat, l:entry.name, l:path, l:entry.bufnr)
     call add(l:lines, l:line)
   endfor
@@ -277,17 +342,21 @@ endfunction
 
 function! s:spaceLoadBuffers(self)
   let l:self = a:self
-  let l:oldbufnr = bufnr('%')
+  " let l:oldbufnr = bufnr('%')
+  let l:bufferList = s:BufferListFromCurrentTab()
+  let l:allBufferList = s:LitespaceGetAllBufferList()
 
   let l:paths = l:self.paths
   for l:path in l:paths
-    let l:strippped = l:path
-    let l:strippped = substitute(l:strippped, '^\s*', '', '')
-    let l:strippped = substitute(l:strippped, '\s*$', '', '')
-    execute 'edit ' . escape(l:strippped, ' ')
+    let l:stripped = l:path
+    let l:stripped = substitute(l:stripped, '^\s*', '', '')
+    let l:stripped = substitute(l:stripped, '\s*$', '', '')
+    " let l:stripped = escape(l:stripped, ' ')
+    call s:bufferListAddName(l:bufferList, l:stripped)
+    call s:bufferListAddName(l:allBufferList, l:stripped)
   endfor
 
-  execute 'buffer ' . l:oldbufnr
+  "execute 'buffer ' . l:oldbufnr
 endfunction
 
 function! s:spaceMerge(self, other)
